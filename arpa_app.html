@@ -395,7 +395,7 @@
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="car-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A">
+      <input type="text" id="car-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A" autocomplete="off">
     </div>
     <div class="field field-auto">
       <label>Fornitore</label>
@@ -413,7 +413,9 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="car-tecnico" placeholder="es. DI ROCCO">
+        <input type="text" id="car-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
+        <datalist id="list-tecnici"></datalist>
+        <datalist id="list-colloc"></datalist>
       </div>
     </div>
     <div class="field">
@@ -457,7 +459,7 @@
     </div>
     <div class="field">
       <label>Prodotto da Aprire <span class="req">*</span></label>
-      <select id="ape-articolo"><option value="">— seleziona prodotto con giacenza —</option></select>
+      <select id="ape-articolo" onchange="onArticoloAperturaSelezionato()"><option value="">— seleziona prodotto con giacenza —</option></select>
     </div>
     <div class="field-row">
       <div class="field field-auto">
@@ -473,7 +475,7 @@
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="ape-colloc" placeholder="es. LAB. CHIMICO / FRIGO A">
+      <input type="text" id="ape-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / FRIGO A" autocomplete="off">
     </div>
   </div>
 
@@ -486,7 +488,7 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="ape-tecnico" placeholder="es. DI ROCCO">
+        <input type="text" id="ape-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
       </div>
     </div>
     <div class="field">
@@ -546,7 +548,7 @@
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="sca-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A">
+      <input type="text" id="sca-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A" autocomplete="off">
     </div>
   </div>
 
@@ -559,7 +561,7 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="sca-tecnico" placeholder="es. DI ROCCO">
+        <input type="text" id="sca-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
       </div>
     </div>
     <div class="field">
@@ -665,6 +667,10 @@ function showPage(id) {
 
 function showForm(tipo) {
   var oggi = new Date().toISOString().split('T')[0];
+  // Carica tecnici e collocazioni per i datalist
+  _loadDatalist('list-tecnici', {action:'tecnici', sede:currentSede});
+  _loadDatalist('list-colloc',  {action:'collocazioni', sede:currentSede});
+
   if (tipo === 'carico') {
     document.getElementById('car-sede').value = currentSede;
     document.getElementById('car-data').value = oggi;
@@ -674,6 +680,9 @@ function showForm(tipo) {
   } else if (tipo === 'apertura') {
     document.getElementById('ape-sede').value = currentSede;
     document.getElementById('ape-data').value = oggi;
+    // Azzera campi lotto
+    document.getElementById('ape-lotto').value = '';
+    document.getElementById('ape-scad').value  = '';
     loadArticoliSelect('ape-articolo');
     showPage('page-form-apertura');
   } else if (tipo === 'scarico') {
@@ -682,6 +691,18 @@ function showForm(tipo) {
     loadArticoliSelect('sca-articolo');
     showPage('page-form-scarico');
   }
+}
+
+// Popola un <datalist> con i valori dall'API
+function _loadDatalist(listId, params) {
+  var dl = document.getElementById(listId);
+  if (!dl) return;
+  api(params, function(d) {
+    if (!d || !d.ok) return;
+    dl.innerHTML = (d.dati || []).map(function(v) {
+      return '<option value="' + v + '">';
+    }).join('');
+  });
 }
 
 // ── SEDE ────────────────────────────────────────────────────
@@ -704,18 +725,7 @@ function api(params, cb) {
     .catch(function(e){ cb(null, e); });
 }
 
-function apiPost(data, cb) {
-  if (!BASE_URL) { cb(null, {ok:false,errore:'URL API non configurato'}); return; }
-  data.token = TOKEN;
-  fetch(BASE_URL, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(data)
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){ cb(d, null); })
-  .catch(function(e){ cb(null, e); });
-}
+// apiPost rimosso - tutte le chiamate usano GET per evitare CORS
 
 // ── HOME STATS ───────────────────────────────────────────────
 function loadHomeStats() {
@@ -801,7 +811,7 @@ function renderOrdini() {
 function loadRegistro() {
   document.getElementById('registroList').innerHTML =
     '<div class="loading"><div class="spinner"></div><p>Caricamento...</p></div>';
-  api({action:'movimenti', sede:currentSede, articolo:'__ALL__', limit:100}, function(d) {
+  api({action:'movimenti', sede:currentSede, limit:100}, function(d) {
     _dataRegistro = (d && d.ok) ? (d.dati||[]) : [];
     renderRegistro();
   });
@@ -941,6 +951,19 @@ function onOrdineSelezionato(ordineId) {
 }
 
 // Autocompila UDM, CONTO, GRUPPO, FORNITORE quando si seleziona l'articolo
+// Autocompila lotto FEFO quando si seleziona articolo in APERTURA
+function onArticoloAperturaSelezionato() {
+  var sel = document.getElementById('ape-articolo');
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt) return;
+  var lotto  = opt.getAttribute('data-lotto')  || '';
+  var scad   = opt.getAttribute('data-scad')   || '';
+  var colloc = opt.getAttribute('data-colloc') || '';
+  document.getElementById('ape-lotto').value  = lotto  || '(FEFO auto)';
+  document.getElementById('ape-scad').value   = scad   || '';
+  if (colloc) document.getElementById('ape-colloc').value = colloc;
+}
+
 function onArticoloSelezionato() {
   var sel = document.getElementById('car-articolo');
   var opt = sel.options[sel.selectedIndex];
@@ -954,18 +977,40 @@ function onArticoloSelezionato() {
 function loadArticoliSelect(selId) {
   var sel = document.getElementById(selId);
   sel.innerHTML = '<option value="">caricamento giacenze...</option>';
-  api({action:'giacenze', sede:currentSede}, function(d) {
+  var isApe = selId === 'ape-articolo';
+  var isSca = selId === 'sca-articolo';
+  var apiParams = isApe
+    ? {action:'lotti_apertura', sede:currentSede}
+    : {action:'giacenze', sede:currentSede};
+
+  api(apiParams, function(d) {
     sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
     if (d && d.ok) {
+      var items = d.dati || [];
       var visti = {};
-      (d.dati||[]).forEach(function(g) {
-        if (!visti[g.articolo]) {
-          visti[g.articolo] = true;
-          var opt = document.createElement('option');
-          opt.value = g.articolo;
-          opt.text  = g.articolo + ' (giac: ' + g.giacenza + ')';
-          sel.appendChild(opt);
+      items.forEach(function(g) {
+        var art = g.articolo;
+        if (!art || visti[art]) return;
+        visti[art] = true;
+        var opt = document.createElement('option');
+        opt.value = art;
+        var giac = isApe ? g.giacenza : g.giacenza;
+        opt.text  = art + ' (giac: ' + giac + ')';
+        // Per apertura: memorizza il primo lotto FEFO per autocompilazione
+        if (isApe && g.lotti && g.lotti.length > 0) {
+          // Ordina per scadenza (FEFO) e prendi il primo
+          var lottiSortati = g.lotti.slice().sort(function(a,b){
+            var da = _parseData(a.scadenza), db = _parseData(b.scadenza);
+            if (!da && !db) return 0;
+            if (!da) return 1;
+            if (!db) return -1;
+            return da - db;
+          });
+          opt.setAttribute('data-lotto',   lottiSortati[0].lotto    || '');
+          opt.setAttribute('data-scad',    lottiSortati[0].scadenza || '');
+          opt.setAttribute('data-colloc',  lottiSortati[0].colloc   || '');
         }
+        sel.appendChild(opt);
       });
     }
   });
@@ -998,60 +1043,59 @@ function simulaScan(targetId) {
 
 // ── SUBMIT ────────────────────────────────────────────────────
 function submitForm(tipo) {
-  var dati = {};
-  var oggi = new Date().toISOString().split('T')[0];
+  var oggi = new Date().toLocaleDateString('it-IT').split('/').reverse().join('-');
+  var params = {action: tipo};
 
   if (tipo === 'carico') {
-    dati = {
-      sede: document.getElementById('car-sede').value,
-      lab:  document.getElementById('car-lab').value,
-      ordine: document.getElementById('car-ordine').value,
-      articolo: document.getElementById('car-articolo').value,
-      tracciabilita: document.getElementById('car-tracc').value,
-      lotto: document.getElementById('car-lotto').value,
-      scadenza: document.getElementById('car-scad').value,
-      collocazione: document.getElementById('car-colloc').value,
-      quantita: document.getElementById('car-qta').value,
-      data: document.getElementById('car-data').value || oggi,
-      tecnico: document.getElementById('car-tecnico').value,
-      note: document.getElementById('car-note').value,
-    };
-    if (!dati.sede || !dati.articolo || !dati.quantita) {
+    params.sede          = document.getElementById('car-sede').value;
+    params.lab           = document.getElementById('car-lab').value;
+    params.ordine        = document.getElementById('car-ordine').value;
+    params.articolo      = document.getElementById('car-articolo').value;
+    params.tracciabilita = document.getElementById('car-tracc').value;
+    params.lotto         = document.getElementById('car-lotto').value;
+    params.scadenza      = document.getElementById('car-scad').value;
+    params.collocazione  = document.getElementById('car-colloc').value;
+    params.quantita      = document.getElementById('car-qta').value;
+    params.data          = document.getElementById('car-data').value || oggi;
+    params.tecnico       = document.getElementById('car-tecnico').value;
+    params.note          = document.getElementById('car-note').value;
+    params.udm           = document.getElementById('car-udm').value;
+    params.conto         = document.getElementById('car-conto').value;
+    params.gruppo        = document.getElementById('car-gruppo').value;
+    params.fornitore     = document.getElementById('car-fornit').value;
+    if (!params.sede || !params.articolo || !params.quantita) {
       toast('Compila i campi obbligatori (sede, articolo, quantità)', 'error'); return;
     }
   } else if (tipo === 'apertura') {
-    dati = {
-      sede: document.getElementById('ape-sede').value,
-      lab:  document.getElementById('ape-lab').value,
-      articolo: document.getElementById('ape-articolo').value,
-      collocazione: document.getElementById('ape-colloc').value,
-      dataApertura: document.getElementById('ape-data').value || oggi,
-      tecnicoApertura: document.getElementById('ape-tecnico').value,
-      note: document.getElementById('ape-note').value,
-    };
-    if (!dati.sede || !dati.articolo) {
+    params.sede            = document.getElementById('ape-sede').value;
+    params.lab             = document.getElementById('ape-lab').value;
+    params.articolo        = document.getElementById('ape-articolo').value;
+    params.collocazione    = document.getElementById('ape-colloc').value;
+    params.dataApertura    = document.getElementById('ape-data').value || oggi;
+    params.tecnicoApertura = document.getElementById('ape-tecnico').value;
+    params.note            = document.getElementById('ape-note').value;
+    if (!params.sede || !params.articolo) {
       toast('Compila i campi obbligatori (sede, articolo)', 'error'); return;
     }
   } else if (tipo === 'scarico') {
-    dati = {
-      sede: document.getElementById('sca-sede').value,
-      lab:  document.getElementById('sca-lab').value,
-      articolo: document.getElementById('sca-articolo').value,
-      collocazione: document.getElementById('sca-colloc').value,
-      data: document.getElementById('sca-data').value || oggi,
-      tecnico: document.getElementById('sca-tecnico').value,
-      note: document.getElementById('sca-note').value,
-    };
-    if (!dati.sede || !dati.articolo) {
+    params.sede         = document.getElementById('sca-sede').value;
+    params.lab          = document.getElementById('sca-lab').value;
+    params.articolo     = document.getElementById('sca-articolo').value;
+    params.collocazione = document.getElementById('sca-colloc').value;
+    params.data         = document.getElementById('sca-data').value || oggi;
+    params.tecnico      = document.getElementById('sca-tecnico').value;
+    params.note         = document.getElementById('sca-note').value;
+    if (!params.sede || !params.articolo) {
       toast('Compila i campi obbligatori (sede, articolo)', 'error'); return;
     }
   }
 
   toast('Invio in corso...', 'info');
-  apiPost({action: tipo, dati: dati}, function(d, err) {
+  // Usa GET invece di POST per evitare problemi CORS
+  api(params, function(d, err) {
     if (err || !d) { toast('Errore di connessione', 'error'); return; }
     if (!d.ok)     { toast('Errore: ' + d.errore, 'error'); return; }
-    toast(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' registrato (riga ' + d.riga + ')', 'success');
+    toast(tipo.charAt(0).toUpperCase()+tipo.slice(1)+' registrato (riga '+d.riga+')', 'success');
     setTimeout(function(){ showPage('page-home'); loadHomeStats(); }, 1200);
   });
 }
