@@ -639,7 +639,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/5'; // ← inserisci URL distribuzione GAS
+var BASE_URL = 'https://script.google.com/macros/s/AKfycbwQnqEH97bSlMPiVL55h-pS9yCxM_oPfx07wKO7jNMi36DGnFVrBjMl3TAMg50r_caFYg/exec';  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -656,17 +656,21 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
-  if (id === 'page-ordini')   loadOrdini();
-  if (id === 'page-registro') loadRegistro();
-  if (id === 'page-giacenze') loadGiacenze();
+  if (id === 'page-ordini')        loadOrdini();
+  if (id === 'page-registro')      loadRegistro();
+  if (id === 'page-giacenze')      loadGiacenze();
+  // Ricarica laboratori ogni volta che si apre un form
+  // per assicurarsi che siano sempre aggiornati
+  if (id === 'page-form-carico' || id === 'page-form-apertura' || id === 'page-form-scarico') {
+    _loadSelect(['car-lab','ape-lab','sca-lab'], {action:'laboratori'});
+    _loadDatalist('list-tecnici', {action:'tecnici'});
+    _loadDatalist('list-colloc',  {action:'collocazioni'});
+  }
 }
 
 function showForm(tipo) {
   var oggi = new Date().toISOString().split('T')[0];
-  // Carica tecnici, collocazioni e laboratori
-  _loadDatalist('list-tecnici', {action:'tecnici',      sede:currentSede});
-  _loadDatalist('list-colloc',  {action:'collocazioni', sede:currentSede});
-  _loadSelect(['car-lab','ape-lab','sca-lab'], {action:'laboratori', sede:currentSede});
+  // Il caricamento dei dropdown viene fatto in showPage
 
   if (tipo === 'carico') {
     document.getElementById('car-sede').value = currentSede;
@@ -704,13 +708,26 @@ function _loadDatalist(listId, params) {
 
 // Popola uno o più <select> con i valori dall'API
 function _loadSelect(ids, params) {
+  var idList = Array.isArray(ids) ? ids : [ids];
+  // Mostra "caricamento..." finché non arriva la risposta
+  idList.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">caricamento...</option>';
+  });
   api(params, function(d) {
-    if (!d || !d.ok || !d.dati) return;
+    if (!d || !d.ok || !d.dati || !d.dati.length) {
+      // Errore o lista vuota: mostra messaggio
+      idList.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<option value="">— nessun valore —</option>';
+      });
+      return;
+    }
     var opts = '<option value="">— seleziona —</option>' +
       d.dati.map(function(v) {
         return '<option value="' + v + '">' + v + '</option>';
       }).join('');
-    (Array.isArray(ids) ? ids : [ids]).forEach(function(id) {
+    idList.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.innerHTML = opts;
     });
