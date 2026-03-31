@@ -1203,6 +1203,9 @@ function submitForm(tipo) {
   var btn = document.querySelector('.submit-btn.submit-' + tipo);
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
+  // Genera nonce univoco per questa operazione (anti-duplicato GAS redirect)
+  params.nonce = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
   // Mostra clessidra
   mostraAttesa(true);
 
