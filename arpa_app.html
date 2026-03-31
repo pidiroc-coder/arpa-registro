@@ -329,7 +329,7 @@
       </div>
       <div class="field">
         <label>Ordine <span class="req">*</span></label>
-        <select id="car-ordine"><option value="">— seleziona —</option></select>
+        <select id="car-ordine" onchange="onOrdineSelezionato(this.value)"><option value="">— seleziona —</option></select>
       </div>
     </div>
   </div>
@@ -344,12 +344,12 @@
     </div>
     <div class="field">
       <label>Codice Articolo <span class="req">*</span></label>
-      <select id="car-articolo"><option value="">— seleziona o scansiona —</option></select>
+      <select id="car-articolo" onchange="onArticoloSelezionato()"><option value="">— seleziona o scansiona —</option></select>
     </div>
     <div class="field-row">
       <div class="field field-auto">
         <label>UDM</label>
-        <input type="text" id="car-udm" placeholder="auto" readonly>
+        <input type="text" id="car-udm" placeholder="auto">
         <span class="auto-tag">auto</span>
       </div>
       <div class="field">
@@ -360,12 +360,12 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>Conto</label>
-        <input type="text" id="car-conto" placeholder="auto" readonly>
+        <input type="text" id="car-conto" placeholder="auto">
         <span class="auto-tag">auto</span>
       </div>
       <div class="field field-auto">
         <label>Gruppo</label>
-        <input type="text" id="car-gruppo" placeholder="auto" readonly>
+        <input type="text" id="car-gruppo" placeholder="auto">
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -638,10 +638,10 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
- 
+
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/s/AKfycbwQnqEH97bSlMPiVL55h-pS9yCxM_oPfx07wKO7jNMi36DGnFVrBjMl3TAMg50r_caFYg/exec';  // ← inserisci URL distribuzione GAS
+var BASE_URL = '';  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -900,11 +900,55 @@ function loadOrdiniSelect(selId) {
       (d.dati||[]).forEach(function(o) {
         var opt = document.createElement('option');
         opt.value = o.id;
-        opt.text  = o.id + ' (' + (o.stato||'') + ')';
+        opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
         sel.appendChild(opt);
       });
     }
   });
+}
+
+// Chiamata quando si seleziona un ordine nel form CARICO
+// Carica i prodotti di quell'ordine e svuota i campi dipendenti
+function onOrdineSelezionato(ordineId) {
+  var selArt = document.getElementById('car-articolo');
+  selArt.innerHTML = '<option value="">caricamento prodotti...</option>';
+  // Svuota campi auto
+  ['car-udm','car-conto','car-gruppo','car-fornit'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  if (!ordineId) {
+    loadArticoliSelect('car-articolo');
+    return;
+  }
+  api({action:'prodotti_ordine', sede:currentSede, ordine:ordineId}, function(d) {
+    selArt.innerHTML = '<option value="">— seleziona prodotto —</option>';
+    if (d && d.ok && d.dati && d.dati.length) {
+      d.dati.forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p.articolo;
+        opt.text  = p.articolo;
+        // Memorizza i dati per autocompilazione
+        opt.setAttribute('data-udm',    p.udm    || '');
+        opt.setAttribute('data-conto',  p.conto  || '');
+        opt.setAttribute('data-gruppo', p.gruppo || '');
+        opt.setAttribute('data-fornit', p.fornitore || '');
+        selArt.appendChild(opt);
+      });
+    } else {
+      selArt.innerHTML = '<option value="">Nessun prodotto per questo ordine</option>';
+    }
+  });
+}
+
+// Autocompila UDM, CONTO, GRUPPO, FORNITORE quando si seleziona l'articolo
+function onArticoloSelezionato() {
+  var sel = document.getElementById('car-articolo');
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt) return;
+  document.getElementById('car-udm').value    = opt.getAttribute('data-udm')    || '';
+  document.getElementById('car-conto').value  = opt.getAttribute('data-conto')  || '';
+  document.getElementById('car-gruppo').value = opt.getAttribute('data-gruppo') || '';
+  document.getElementById('car-fornit').value = opt.getAttribute('data-fornit') || '';
 }
 
 function loadArticoliSelect(selId) {
