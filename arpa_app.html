@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1a2744">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ARPA Molise">
+<title>ARPA Molise — Registro</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --blu:    #1a2744;
+    --blu2:   #243660;
+    --acc:    #3b82f6;
+    --acc2:   #60a5fa;
+    --grn:    #16a34a;
+    --amb:    #d97706;
+    --ros:    #dc2626;
+    --pur:    #7c3aed;
+    --teal:   #0d9488;
+    --bg:     #f0f4f8;
+    --card:   #ffffff;
+    --txt:    #1e293b;
+    --txt2:   #64748b;
+    --txt3:   #94a3b8;
+    --bord:   #e2e8f0;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --rad:    16px;
+    --radSm:  10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:var(--bg); color:var(--txt); min-height:100vh; max-width:480px; margin:0 auto; position:relative; overflow-x:hidden; }
+
+  /* ── HEADER ── */
+  .header { background:var(--blu); color:#fff; padding:14px 18px 12px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .header-left { display:flex; align-items:center; gap:10px; }
+  .header-logo { width:34px; height:34px; background:rgba(255,255,255,0.12); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .header-logo svg { width:20px; height:20px; }
+  .header-title { font-size:15px; font-weight:600; letter-spacing:0.01em; }
+  .header-sub { font-size:11px; color:rgba(255,255,255,0.55); margin-top:1px; }
+  .header-badge { background:rgba(59,130,246,0.25); border:1px solid rgba(59,130,246,0.4); color:var(--acc2); font-size:11px; padding:3px 8px; border-radius:6px; }
+
+  /* ── SEDE SELECTOR ── */
+  .sede-bar { background:var(--blu2); display:flex; padding:6px 18px; gap:8px; }
+  .sede-btn { flex:1; padding:7px; border-radius:8px; border:none; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+  .sede-btn.active { background:var(--acc); color:#fff; }
+  .sede-btn:not(.active) { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.55); }
+
+  /* ── PAGES ── */
+  .page { display:none; padding:16px; }
+  .page.active { display:block; }
+
+  /* ── HOME GRID ── */
+  .home-welcome { padding:4px 0 14px; }
+  .home-welcome h2 { font-size:18px; font-weight:600; color:var(--txt); }
+  .home-welcome p { font-size:13px; color:var(--txt2); margin-top:3px; }
+
+  .alert-bar { background:#fffbeb; border:1px solid #fde68a; border-radius:var(--radSm); padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+  .alert-bar svg { flex-shrink:0; }
+  .alert-bar p { font-size:12px; color:#92400e; }
+  .alert-bar strong { font-weight:600; }
+  .alert-bar.hidden { display:none; }
+
+  .op-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  .op-btn { background:var(--card); border:1px solid var(--bord); border-radius:var(--rad); padding:18px 12px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; transition:all .15s; box-shadow:var(--shadow); text-decoration:none; }
+  .op-btn:active { transform:scale(0.96); }
+  .op-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; }
+  .op-icon.blu { background:#eff6ff; }
+  .op-icon.grn { background:#f0fdf4; }
+  .op-icon.amb { background:#fffbeb; }
+  .op-icon.ros { background:#fef2f2; }
+  .op-label { font-size:14px; font-weight:600; color:var(--txt); }
+  .op-desc  { font-size:11px; color:var(--txt2); text-align:center; line-height:1.4; }
+
+  .op-btn-wide { grid-column:span 2; flex-direction:row; justify-content:flex-start; padding:14px 18px; gap:14px; }
+  .op-btn-wide .op-icon { width:40px; height:40px; border-radius:10px; flex-shrink:0; }
+  .op-btn-wide .op-label { font-size:14px; }
+
+  /* ── FORM ── */
+  .form-header { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+  .back-btn { width:36px; height:36px; border-radius:10px; background:var(--card); border:1px solid var(--bord); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .form-header h2 { font-size:17px; font-weight:600; }
+  .form-badge { margin-left:auto; font-size:11px; font-weight:600; padding:4px 10px; border-radius:6px; }
+  .badge-carico  { background:#eff6ff; color:#1d4ed8; }
+  .badge-apertura{ background:#fffbeb; color:#b45309; }
+  .badge-scarico { background:#fef2f2; color:#b91c1c; }
+  .badge-ordine  { background:#f0fdf4; color:#15803d; }
+
+  .form-section { background:var(--card); border:1px solid var(--bord); border-radius:var(--rad); padding:16px; margin-bottom:12px; box-shadow:var(--shadow); }
+  .form-section-title { font-size:11px; font-weight:600; color:var(--txt2); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; }
+  .field { margin-bottom:14px; }
+  .field:last-child { margin-bottom:0; }
+  .field label { display:block; font-size:12px; font-weight:600; color:var(--txt2); margin-bottom:5px; }
+  .field label .req { color:var(--ros); margin-left:2px; }
+  .field input, .field select, .field textarea {
+    width:100%; border:1.5px solid var(--bord); border-radius:var(--radSm); padding:10px 12px;
+    font-size:14px; color:var(--txt); background:var(--bg); outline:none; transition:border .15s;
+    -webkit-appearance:none; appearance:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--acc); background:#fff; }
+  .field textarea { min-height:70px; resize:none; line-height:1.5; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field-auto { position:relative; }
+  .field-auto input { background:#f8fafc; color:var(--txt2); }
+  .auto-tag { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:10px; background:#e0e7ff; color:#3730a3; padding:2px 7px; border-radius:5px; pointer-events:none; }
+
+  .scan-btn { width:100%; border:1.5px dashed var(--acc); border-radius:var(--radSm); padding:12px; display:flex; align-items:center; justify-content:center; gap:8px; background:#eff6ff; color:var(--acc); font-size:14px; font-weight:600; cursor:pointer; }
+  .scan-btn svg { width:20px; height:20px; }
+
+  .submit-btn { width:100%; padding:15px; border-radius:var(--rad); border:none; font-size:16px; font-weight:700; color:#fff; cursor:pointer; margin-top:4px; transition:all .15s; }
+  .submit-btn:active { transform:scale(0.98); }
+  .submit-carico  { background:var(--acc); }
+  .submit-apertura{ background:var(--amb); }
+  .submit-scarico { background:var(--ros); }
+  .submit-ordine  { background:var(--grn); }
+
+  /* ── REGISTRO ── */
+  .filter-row { display:flex; gap:8px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px; }
+  .filter-row::-webkit-scrollbar { display:none; }
+  .filter-chip { flex-shrink:0; padding:6px 12px; border-radius:20px; border:1.5px solid var(--bord); font-size:12px; font-weight:600; background:var(--card); color:var(--txt2); cursor:pointer; white-space:nowrap; }
+  .filter-chip.active { background:var(--blu); color:#fff; border-color:var(--blu); }
+
+  .search-wrap { position:relative; margin-bottom:12px; }
+  .search-wrap input { padding-left:38px; }
+  .search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--txt3); pointer-events:none; }
+
+  .mov-list { display:flex; flex-direction:column; gap:8px; }
+  .mov-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--radSm); padding:12px 14px; box-shadow:var(--shadow); }
+  .mov-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .mov-tipo { font-size:11px; font-weight:700; padding:3px 8px; border-radius:5px; }
+  .mov-tipo.CARICO   { background:#eff6ff; color:#1d4ed8; }
+  .mov-tipo.APERTURA { background:#fffbeb; color:#b45309; }
+  .mov-tipo.SCARICO  { background:#fef2f2; color:#b91c1c; }
+  .mov-data { font-size:11px; color:var(--txt3); }
+  .mov-art { font-size:14px; font-weight:600; color:var(--txt); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mov-sub { font-size:12px; color:var(--txt2); display:flex; gap:10px; flex-wrap:wrap; }
+  .mov-sub span { display:flex; align-items:center; gap:3px; }
+
+  /* ── GIACENZE ── */
+  .giac-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .giac-header h3 { font-size:16px; font-weight:600; }
+  .refresh-btn { width:32px; height:32px; border-radius:8px; border:1px solid var(--bord); background:var(--card); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+  .giac-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--radSm); padding:12px 14px; margin-bottom:8px; box-shadow:var(--shadow); }
+  .giac-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .giac-art { font-size:13px; font-weight:600; color:var(--txt); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .giac-badge { flex-shrink:0; font-size:12px; font-weight:700; padding:3px 10px; border-radius:6px; margin-left:8px; }
+  .giac-ok   { background:#f0fdf4; color:#16a34a; }
+  .giac-warn { background:#fffbeb; color:#b45309; }
+  .giac-zero { background:#fef2f2; color:#dc2626; }
+  .giac-sub  { font-size:11px; color:var(--txt2); display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; }
+  .giac-sub span { display:flex; align-items:center; gap:3px; }
+
+  /* ── ORDINI ── */
+  .ord-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--radSm); padding:12px 14px; margin-bottom:8px; box-shadow:var(--shadow); }
+  .ord-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .ord-id { font-size:14px; font-weight:700; color:var(--txt); }
+  .ord-stato { font-size:11px; font-weight:700; padding:3px 8px; border-radius:5px; }
+  .stato-da    { background:#fef2f2; color:#dc2626; }
+  .stato-par   { background:#fffbeb; color:#b45309; }
+  .stato-evaso { background:#f0fdf4; color:#16a34a; }
+  .ord-prod { font-size:12px; color:var(--txt2); margin-bottom:4px; }
+  .ord-progress { background:#e2e8f0; border-radius:4px; height:6px; margin-top:8px; }
+  .ord-progress-bar { height:6px; border-radius:4px; background:var(--acc); transition:width .4s; }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(100px); background:#1e293b; color:#fff; padding:12px 20px; border-radius:12px; font-size:14px; font-weight:500; z-index:999; transition:transform .3s; max-width:90vw; text-align:center; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.success { background:var(--grn); }
+  .toast.error   { background:var(--ros); }
+
+  /* ── LOADING ── */
+  .loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 0; gap:12px; }
+  .spinner { width:32px; height:32px; border:3px solid var(--bord); border-top-color:var(--acc); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading p { font-size:13px; color:var(--txt2); }
+
+  /* ── EMPTY ── */
+  .empty { text-align:center; padding:40px 20px; color:var(--txt2); font-size:14px; }
+
+  /* ── BOTTOM NAV placeholder (padding) ── */
+  .page-content { padding-bottom:20px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 20 20" fill="none">
+        <rect x="2" y="2" width="7" height="7" rx="1.5" fill="rgba(255,255,255,0.9)"/>
+        <rect x="11" y="2" width="7" height="7" rx="1.5" fill="rgba(255,255,255,0.5)"/>
+        <rect x="2" y="11" width="7" height="7" rx="1.5" fill="rgba(255,255,255,0.5)"/>
+        <rect x="11" y="11" width="7" height="7" rx="1.5" fill="rgba(255,255,255,0.9)"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">ARPA Molise</div>
+      <div class="header-sub">Registro Laboratorio</div>
+    </div>
+  </div>
+  <div class="header-badge" id="userBadge">•••</div>
+</div>
+
+<!-- SEDE BAR -->
+<div class="sede-bar">
+  <button class="sede-btn active" onclick="setSede('CB')" id="btnCB">CB — Campobasso</button>
+  <button class="sede-btn" onclick="setSede('IS')" id="btnIS">IS — Isernia</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: HOME -->
+<!-- ════════════════════════════════════════ -->
+<div class="page active page-content" id="page-home">
+  <div class="home-welcome">
+    <h2>Buongiorno</h2>
+    <p id="homeSubtitle">Sede CB — caricamento...</p>
+  </div>
+
+  <div class="alert-bar hidden" id="alertBar">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2L16 15H2L9 2Z" stroke="#b45309" stroke-width="1.5" fill="#fef3c7"/>
+      <path d="M9 7v4M9 13v.5" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <p id="alertText"></p>
+  </div>
+
+  <div class="op-grid">
+    <div class="op-btn" onclick="showPage('page-ordini')">
+      <div class="op-icon blu">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+          <rect x="4" y="4" width="18" height="4" rx="2" fill="#3b82f6"/>
+          <rect x="4" y="11" width="12" height="2.5" rx="1.25" fill="#93c5fd"/>
+          <rect x="4" y="16" width="15" height="2.5" rx="1.25" fill="#93c5fd"/>
+          <rect x="4" y="21" width="9" height="2.5" rx="1.25" fill="#bfdbfe"/>
+        </svg>
+      </div>
+      <span class="op-label">Ordini</span>
+      <span class="op-desc" id="countOrdini">—</span>
+    </div>
+    <div class="op-btn" onclick="showForm('carico')">
+      <div class="op-icon grn">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+          <circle cx="13" cy="13" r="9" stroke="#16a34a" stroke-width="1.5"/>
+          <path d="M13 8v10M8 13h10" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="op-label">Carico</span>
+      <span class="op-desc">Registra entrata</span>
+    </div>
+    <div class="op-btn" onclick="showForm('apertura')">
+      <div class="op-icon amb">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+          <rect x="7" y="12" width="12" height="9" rx="2" stroke="#d97706" stroke-width="1.5"/>
+          <path d="M10 12V9a3 3 0 016 0v3" stroke="#d97706" stroke-width="1.5" fill="none"/>
+          <circle cx="13" cy="16.5" r="1.5" fill="#d97706"/>
+        </svg>
+      </div>
+      <span class="op-label">Apertura</span>
+      <span class="op-desc">Apri un lotto</span>
+    </div>
+    <div class="op-btn" onclick="showForm('scarico')">
+      <div class="op-icon ros">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+          <circle cx="13" cy="13" r="9" stroke="#dc2626" stroke-width="1.5"/>
+          <path d="M9 9l8 8M17 9l-8 8" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="op-label">Scarico</span>
+      <span class="op-desc">Registra uscita</span>
+    </div>
+    <div class="op-btn op-btn-wide" onclick="showPage('page-registro')">
+      <div class="op-icon blu" style="background:#f1f5f9;">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M4 5h14M4 11h10M4 17h7" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <span class="op-label">Registro Movimenti</span>
+        <div class="op-desc" style="text-align:left;margin-top:2px;">Storico e filtri</div>
+      </div>
+    </div>
+    <div class="op-btn op-btn-wide" onclick="showPage('page-giacenze')">
+      <div class="op-icon grn" style="background:#f0fdf4;">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="3" y="14" width="4" height="5" rx="1" fill="#16a34a"/>
+          <rect x="9" y="10" width="4" height="9" rx="1" fill="#4ade80"/>
+          <rect x="15" y="6" width="4" height="13" rx="1" fill="#86efac"/>
+        </svg>
+      </div>
+      <div>
+        <span class="op-label">Giacenze Lotti</span>
+        <div class="op-desc" style="text-align:left;margin-top:2px;">Disponibilità e scadenze</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: FORM CARICO -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-form-carico">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Nuovo Carico</h2>
+    <span class="form-badge badge-carico">CARICO</span>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Identificazione</div>
+    <div class="field">
+      <label>Sede <span class="req">*</span></label>
+      <select id="car-sede"><option value="CB">CB — Campobasso</option><option value="IS">IS — Isernia</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Laboratorio <span class="req">*</span></label>
+        <select id="car-lab">
+          <option>LAB. CHIMICO</option>
+          <option>LAB. BIOLOGICO</option>
+          <option>LAB. FISICO</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Ordine <span class="req">*</span></label>
+        <select id="car-ordine"><option value="">— seleziona —</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Prodotto</div>
+    <div class="field">
+      <div class="scan-btn" onclick="simulaScan('car-articolo')">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="3" height="12" rx="1" fill="var(--acc)"/><rect x="6" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="9" y="4" width="2.5" height="12" rx=".5" fill="var(--acc)"/><rect x="13" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="16" y="4" width="2" height="12" rx="1" fill="var(--acc)"/></svg>
+        Scansiona barcode prodotto
+      </div>
+    </div>
+    <div class="field">
+      <label>Codice Articolo <span class="req">*</span></label>
+      <select id="car-articolo"><option value="">— seleziona o scansiona —</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field field-auto">
+        <label>UDM</label>
+        <input type="text" id="car-udm" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+      <div class="field">
+        <label>Quantità <span class="req">*</span></label>
+        <input type="number" id="car-qta" placeholder="es. 2" min="1">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field field-auto">
+        <label>Conto</label>
+        <input type="text" id="car-conto" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+      <div class="field field-auto">
+        <label>Gruppo</label>
+        <input type="text" id="car-gruppo" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Lotto e Tracciabilità</div>
+    <div class="field">
+      <label>Tracciabilità Lotto <span class="req">*</span></label>
+      <select id="car-tracc" onchange="toggleLottoFields('carico')">
+        <option value="">— seleziona —</option>
+        <option value="SI">SI — con lotto e scadenza</option>
+        <option value="NO">NO — senza tracciabilità</option>
+      </select>
+    </div>
+    <div id="car-lotto-fields">
+      <div class="field-row">
+        <div class="field">
+          <label>N. Lotto <span class="req">*</span></label>
+          <input type="text" id="car-lotto" placeholder="es. LOT2025001">
+        </div>
+        <div class="field">
+          <label>Scadenza <span class="req">*</span></label>
+          <input type="date" id="car-scad">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Collocazione <span class="req">*</span></label>
+      <input type="text" id="car-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A">
+    </div>
+    <div class="field field-auto">
+      <label>Fornitore</label>
+      <input type="text" id="car-fornit" placeholder="auto da ordine" readonly>
+      <span class="auto-tag">auto</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Registrazione</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Data Carico <span class="req">*</span></label>
+        <input type="date" id="car-data">
+      </div>
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <input type="text" id="car-tecnico" placeholder="es. DI ROCCO">
+      </div>
+    </div>
+    <div class="field">
+      <label>Note</label>
+      <textarea id="car-note" placeholder="Inserisci eventuali note..."></textarea>
+    </div>
+  </div>
+
+  <button class="submit-btn submit-carico" onclick="submitForm('carico')">Registra Carico</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: FORM APERTURA -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-form-apertura">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Nuova Apertura</h2>
+    <span class="form-badge badge-apertura">APERTURA</span>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Sede e Prodotto</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Sede <span class="req">*</span></label>
+        <select id="ape-sede"><option value="CB">CB</option><option value="IS">IS</option></select>
+      </div>
+      <div class="field">
+        <label>Laboratorio <span class="req">*</span></label>
+        <select id="ape-lab"><option>LAB. CHIMICO</option><option>LAB. BIOLOGICO</option><option>LAB. FISICO</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <div class="scan-btn" onclick="simulaScan('ape-articolo')">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="3" height="12" rx="1" fill="var(--acc)"/><rect x="6" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="9" y="4" width="2.5" height="12" rx=".5" fill="var(--acc)"/><rect x="13" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="16" y="4" width="2" height="12" rx="1" fill="var(--acc)"/></svg>
+        Scansiona barcode prodotto
+      </div>
+    </div>
+    <div class="field">
+      <label>Prodotto da Aprire <span class="req">*</span></label>
+      <select id="ape-articolo"><option value="">— seleziona prodotto con giacenza —</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field field-auto">
+        <label>N. Lotto</label>
+        <input type="text" id="ape-lotto" placeholder="FEFO auto" readonly>
+        <span class="auto-tag">FEFO</span>
+      </div>
+      <div class="field field-auto">
+        <label>Scadenza</label>
+        <input type="text" id="ape-scad" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Collocazione <span class="req">*</span></label>
+      <input type="text" id="ape-colloc" placeholder="es. LAB. CHIMICO / FRIGO A">
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Data e Tecnico Apertura</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Data Apertura <span class="req">*</span></label>
+        <input type="date" id="ape-data">
+      </div>
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <input type="text" id="ape-tecnico" placeholder="es. DI ROCCO">
+      </div>
+    </div>
+    <div class="field">
+      <label>Note</label>
+      <textarea id="ape-note" placeholder="Inserisci eventuali note..."></textarea>
+    </div>
+  </div>
+
+  <button class="submit-btn submit-apertura" onclick="submitForm('apertura')">Registra Apertura</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: FORM SCARICO -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-form-scarico">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Nuovo Scarico</h2>
+    <span class="form-badge badge-scarico">SCARICO</span>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Sede e Prodotto</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Sede <span class="req">*</span></label>
+        <select id="sca-sede"><option value="CB">CB</option><option value="IS">IS</option></select>
+      </div>
+      <div class="field">
+        <label>Laboratorio <span class="req">*</span></label>
+        <select id="sca-lab"><option>LAB. CHIMICO</option><option>LAB. BIOLOGICO</option><option>LAB. FISICO</option></select>
+      </div>
+    </div>
+    <div class="field">
+      <div class="scan-btn" onclick="simulaScan('sca-articolo')">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="3" height="12" rx="1" fill="var(--acc)"/><rect x="6" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="9" y="4" width="2.5" height="12" rx=".5" fill="var(--acc)"/><rect x="13" y="4" width="1.5" height="12" rx=".5" fill="var(--acc)"/><rect x="16" y="4" width="2" height="12" rx="1" fill="var(--acc)"/></svg>
+        Scansiona barcode prodotto
+      </div>
+    </div>
+    <div class="field">
+      <label>Prodotto da Scaricare <span class="req">*</span></label>
+      <select id="sca-articolo" onchange="caricaLottiScarico()"><option value="">— seleziona prodotto —</option></select>
+    </div>
+    <div class="field-row">
+      <div class="field field-auto">
+        <label>N. Lotto</label>
+        <input type="text" id="sca-lotto" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+      <div class="field field-auto">
+        <label>Tracciabilità</label>
+        <input type="text" id="sca-tracc" placeholder="auto" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Collocazione <span class="req">*</span></label>
+      <input type="text" id="sca-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A">
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">Registrazione</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Data Scarico <span class="req">*</span></label>
+        <input type="date" id="sca-data">
+      </div>
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <input type="text" id="sca-tecnico" placeholder="es. DI ROCCO">
+      </div>
+    </div>
+    <div class="field">
+      <label>Note</label>
+      <textarea id="sca-note" placeholder="Inserisci eventuali note..."></textarea>
+    </div>
+  </div>
+
+  <button class="submit-btn submit-scarico" onclick="submitForm('scarico')">Registra Scarico</button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: ORDINI -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-ordini">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Ordini</h2>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip active" onclick="filterOrdini(this,'ALL')">Tutti</div>
+    <div class="filter-chip" onclick="filterOrdini(this,'DA EVADERE')">Da evadere</div>
+    <div class="filter-chip" onclick="filterOrdini(this,'EVASO PARZIALMENTE')">Parziali</div>
+    <div class="filter-chip" onclick="filterOrdini(this,'EVASO')">Evasi</div>
+  </div>
+  <div id="ordiniList"><div class="loading"><div class="spinner"></div><p>Caricamento ordini...</p></div></div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: REGISTRO -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-registro">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Registro Movimenti</h2>
+  </div>
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input type="text" id="regSearch" placeholder="Cerca articolo..." oninput="filterRegistro()" style="padding-left:38px;">
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip active" onclick="filterRegTipo(this,'ALL')">Tutti</div>
+    <div class="filter-chip" onclick="filterRegTipo(this,'CARICO')">Carichi</div>
+    <div class="filter-chip" onclick="filterRegTipo(this,'APERTURA')">Aperture</div>
+    <div class="filter-chip" onclick="filterRegTipo(this,'SCARICO')">Scarichi</div>
+  </div>
+  <div id="registroList"><div class="loading"><div class="spinner"></div><p>Caricamento movimenti...</p></div></div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: GIACENZE -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-giacenze">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Giacenze Lotti</h2>
+    <div class="refresh-btn" onclick="loadGiacenze()" style="margin-left:auto;">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1110.5-4M13 1v4H9" stroke="var(--txt2)" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-chip active" onclick="filterGiac(this,'ALL')">Tutti</div>
+    <div class="filter-chip" onclick="filterGiac(this,'ok')">Disponibili</div>
+    <div class="filter-chip" onclick="filterGiac(this,'warn')">In esaurimento</div>
+    <div class="filter-chip" onclick="filterGiac(this,'zero')">Esauriti</div>
+    <div class="filter-chip" onclick="filterGiac(this,'scad')">In scadenza</div>
+  </div>
+  <div id="giacenzeList"><div class="loading"><div class="spinner"></div><p>Caricamento giacenze...</p></div></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+var BASE_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AWDtjMVqunj7LraauK0yZAFzGbZe6UIWoVixF-mbbtXR5fLF_iFB12XWpLu7BodFMFGbhckTa2GDp1mMKmNGFzRojxr0W0Y_zyg2AUMZ_06QJK6C12HdoOLzoKqceqjLSDTW_00Ox6jYZH_vFVBvzHUYQ9EM2wBp7VM_jKGf4IE9zexs0mVVSaszGd1e9e8WexuK9HIslRQE9KZ56w3EZXwMstDfX3b7KUgb03g64OSZ61PdVtgMzr32wOm8mkYqoXkJ4bN2sjbHjJyMXfPtGir4q8zd86gNYvFeEzn-kiNF&lib=MvbNedGeluapBkmmr9RUQYB5zQF76qHC4';  // ← inserisci URL distribuzione GAS
+var TOKEN    = 'ARPA2025MOL';
+
+var currentSede    = 'CB';
+var regTipoFilter  = 'ALL';
+var ordStatoFilter = 'ALL';
+var giacFilter     = 'ALL';
+
+var _dataOrdini   = [];
+var _dataRegistro = [];
+var _dataGiacenze = [];
+
+// ── NAVIGAZIONE ──────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if (id === 'page-ordini')   loadOrdini();
+  if (id === 'page-registro') loadRegistro();
+  if (id === 'page-giacenze') loadGiacenze();
+}
+
+function showForm(tipo) {
+  var oggi = new Date().toISOString().split('T')[0];
+  if (tipo === 'carico') {
+    document.getElementById('car-sede').value = currentSede;
+    document.getElementById('car-data').value = oggi;
+    loadOrdiniSelect('car-ordine');
+    loadArticoliSelect('car-articolo');
+    showPage('page-form-carico');
+  } else if (tipo === 'apertura') {
+    document.getElementById('ape-sede').value = currentSede;
+    document.getElementById('ape-data').value = oggi;
+    loadArticoliSelect('ape-articolo');
+    showPage('page-form-apertura');
+  } else if (tipo === 'scarico') {
+    document.getElementById('sca-sede').value = currentSede;
+    document.getElementById('sca-data').value = oggi;
+    loadArticoliSelect('sca-articolo');
+    showPage('page-form-scarico');
+  }
+}
+
+// ── SEDE ────────────────────────────────────────────────────
+function setSede(s) {
+  currentSede = s;
+  document.getElementById('btnCB').classList.toggle('active', s === 'CB');
+  document.getElementById('btnIS').classList.toggle('active', s === 'IS');
+  document.getElementById('userBadge').textContent = s;
+  loadHomeStats();
+}
+
+// ── API CALL ─────────────────────────────────────────────────
+function api(params, cb) {
+  if (!BASE_URL) { cb(null, {ok:false,errore:'URL API non configurato'}); return; }
+  var url = BASE_URL + '?token=' + TOKEN;
+  for (var k in params) url += '&' + k + '=' + encodeURIComponent(params[k]);
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ cb(d, null); })
+    .catch(function(e){ cb(null, e); });
+}
+
+function apiPost(data, cb) {
+  if (!BASE_URL) { cb(null, {ok:false,errore:'URL API non configurato'}); return; }
+  data.token = TOKEN;
+  fetch(BASE_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ cb(d, null); })
+  .catch(function(e){ cb(null, e); });
+}
+
+// ── HOME STATS ───────────────────────────────────────────────
+function loadHomeStats() {
+  document.getElementById('homeSubtitle').textContent = 'Sede ' + currentSede + ' — caricamento...';
+  document.getElementById('countOrdini').textContent = 'caricamento...';
+
+  if (!BASE_URL) {
+    document.getElementById('homeSubtitle').textContent = 'Sede ' + currentSede + ' — demo offline';
+    document.getElementById('countOrdini').textContent = 'URL API da configurare';
+    _mostraAlertDemo();
+    return;
+  }
+
+  api({action:'ordini', sede:currentSede}, function(d) {
+    if (d && d.ok) {
+      var aperti = (d.dati||[]).filter(function(o){ return o.stato !== 'EVASO'; }).length;
+      document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
+    }
+  });
+  api({action:'scadenze', sede:currentSede, giorni:30}, function(d) {
+    if (d && d.ok && d.totaleAlert > 0) {
+      var ab = document.getElementById('alertBar');
+      document.getElementById('alertText').innerHTML =
+        '<strong>' + d.totaleAlert + ' alert:</strong> ' +
+        d.inScadenza.length + ' prodotti in scadenza, ' +
+        d.sottoSoglia.length + ' sotto soglia';
+      ab.classList.remove('hidden');
+    }
+    var dt = new Date();
+    document.getElementById('homeSubtitle').textContent =
+      'Sede ' + currentSede + ' — ' + dt.toLocaleDateString('it-IT');
+  });
+}
+
+function _mostraAlertDemo() {
+  var ab = document.getElementById('alertBar');
+  document.getElementById('alertText').innerHTML =
+    '<strong>Modalità demo:</strong> imposta BASE_URL nell\'app per connettere al foglio Google.';
+  ab.classList.remove('hidden');
+}
+
+// ── ORDINI ───────────────────────────────────────────────────
+function loadOrdini() {
+  document.getElementById('ordiniList').innerHTML =
+    '<div class="loading"><div class="spinner"></div><p>Caricamento ordini...</p></div>';
+  api({action:'ordini', sede:currentSede}, function(d) {
+    _dataOrdini = (d && d.ok) ? (d.dati||[]) : [];
+    renderOrdini();
+  });
+}
+
+function filterOrdini(el, stato) {
+  ordStatoFilter = stato;
+  document.querySelectorAll('#page-ordini .filter-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  renderOrdini();
+}
+
+function renderOrdini() {
+  var list = document.getElementById('ordiniList');
+  var data = _dataOrdini.filter(function(o){
+    return ordStatoFilter === 'ALL' || o.stato === ordStatoFilter;
+  });
+  if (!data.length) { list.innerHTML = '<div class="empty">Nessun ordine trovato</div>'; return; }
+  list.innerHTML = data.map(function(o) {
+    var cls = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
+    var prods = (o.prodotti||[]).map(function(p){
+      var qOrd = parseFloat(p.qtaOrd)||0;
+      var qCar = parseFloat(p.qtaCar)||0;
+      var pct  = qOrd > 0 ? Math.round(qCar/qOrd*100) : 0;
+      return '<div class="ord-prod">' + p.articolo +
+        ' <span style="color:var(--txt3);">' + qCar + '/' + qOrd + ' ' + (p.udm||'') + '</span></div>' +
+        '<div class="ord-progress"><div class="ord-progress-bar" style="width:'+pct+'%"></div></div>';
+    }).join('');
+    return '<div class="ord-card"><div class="ord-top">' +
+      '<span class="ord-id">' + o.id + '</span>' +
+      '<span class="ord-stato ' + cls + '">' + (o.stato||'—') + '</span>' +
+      '</div>' + prods + '</div>';
+  }).join('');
+}
+
+// ── REGISTRO ─────────────────────────────────────────────────
+function loadRegistro() {
+  document.getElementById('registroList').innerHTML =
+    '<div class="loading"><div class="spinner"></div><p>Caricamento...</p></div>';
+  api({action:'movimenti', sede:currentSede, articolo:'__ALL__', limit:100}, function(d) {
+    _dataRegistro = (d && d.ok) ? (d.dati||[]) : [];
+    renderRegistro();
+  });
+}
+
+function filterRegTipo(el, tipo) {
+  regTipoFilter = tipo;
+  document.querySelectorAll('#page-registro .filter-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  renderRegistro();
+}
+
+function filterRegistro() { renderRegistro(); }
+
+function renderRegistro() {
+  var search = (document.getElementById('regSearch').value||'').toLowerCase();
+  var list   = document.getElementById('registroList');
+  var data   = _dataRegistro.filter(function(m){
+    var tipoOk = regTipoFilter === 'ALL' || m.tipo === regTipoFilter;
+    var txtOk  = !search || m.articolo.toLowerCase().indexOf(search) !== -1;
+    return tipoOk && txtOk;
+  });
+  if (!data.length) { list.innerHTML = '<div class="empty">Nessun movimento trovato</div>'; return; }
+  list.innerHTML = '<div class="mov-list">' + data.map(function(m) {
+    return '<div class="mov-card"><div class="mov-top">' +
+      '<span class="mov-tipo ' + m.tipo + '">' + m.tipo + '</span>' +
+      '<span class="mov-data">' + (m.data||'—') + '</span>' +
+      '</div><div class="mov-art">' + m.articolo + '</div>' +
+      '<div class="mov-sub">' +
+      (m.lotto ? '<span>Lotto: ' + m.lotto + '</span>' : '') +
+      (m.quantita ? '<span>Qt: ' + m.quantita + '</span>' : '') +
+      (m.tecnico ? '<span>' + m.tecnico + '</span>' : '') +
+      '</div></div>';
+  }).join('') + '</div>';
+}
+
+// ── GIACENZE ─────────────────────────────────────────────────
+function loadGiacenze() {
+  document.getElementById('giacenzeList').innerHTML =
+    '<div class="loading"><div class="spinner"></div><p>Caricamento giacenze...</p></div>';
+  api({action:'giacenze', sede:currentSede}, function(d) {
+    _dataGiacenze = (d && d.ok) ? (d.dati||[]) : [];
+    renderGiacenze();
+  });
+}
+
+function filterGiac(el, f) {
+  giacFilter = f;
+  document.querySelectorAll('#page-giacenze .filter-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  renderGiacenze();
+}
+
+function renderGiacenze() {
+  var list = document.getElementById('giacenzeList');
+  var oggi = new Date();
+  var data = _dataGiacenze.filter(function(g) {
+    if (giacFilter === 'ALL')  return true;
+    if (giacFilter === 'zero') return g.giacenza <= 0;
+    if (giacFilter === 'ok')   return g.giacenza > 0;
+    if (giacFilter === 'warn') return g.giacenza > 0 && g.giacenza <= 5;
+    if (giacFilter === 'scad') {
+      var dt = _parseData(g.scadenza);
+      return dt && dt <= new Date(oggi.getTime() + 30*86400000);
+    }
+    return true;
+  });
+  if (!data.length) { list.innerHTML = '<div class="empty">Nessuna giacenza trovata</div>'; return; }
+  list.innerHTML = data.map(function(g) {
+    var cls  = g.giacenza <= 0 ? 'giac-zero' : g.giacenza <= 5 ? 'giac-warn' : 'giac-ok';
+    var scadDt = _parseData(g.scadenza);
+    var scadWarn = scadDt && scadDt <= new Date(oggi.getTime() + 30*86400000);
+    var gg = scadDt ? Math.ceil((scadDt - oggi) / 86400000) : null;
+    var scadLabel = g.scadenza || '—';
+    if (gg !== null && gg <= 30) scadLabel += gg < 0 ? ' ⚠ scaduto' : ' (' + gg + 'gg)';
+    return '<div class="giac-card">' +
+      '<div class="giac-top">' +
+      '<span class="giac-art">' + g.articolo + '</span>' +
+      '<span class="giac-badge ' + cls + '">' + g.giacenza + ' ' + (g.udm||'') + '</span>' +
+      '</div>' +
+      '<div class="giac-sub">' +
+      '<span>Lotto: ' + (g.lotto||'—') + '</span>' +
+      '<span style="' + (scadWarn?'color:var(--amb);font-weight:600;':'') + '">Scad: ' + scadLabel + '</span>' +
+      (g.colloc ? '<span>' + g.colloc + '</span>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+// ── FORM HELPERS ─────────────────────────────────────────────
+function loadOrdiniSelect(selId) {
+  var sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">caricamento...</option>';
+  api({action:'ordini', sede:currentSede}, function(d) {
+    sel.innerHTML = '<option value="">— seleziona ordine —</option>';
+    if (d && d.ok) {
+      (d.dati||[]).forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = o.id;
+        opt.text  = o.id + ' (' + (o.stato||'') + ')';
+        sel.appendChild(opt);
+      });
+    }
+  });
+}
+
+function loadArticoliSelect(selId) {
+  var sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">caricamento giacenze...</option>';
+  api({action:'giacenze', sede:currentSede}, function(d) {
+    sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
+    if (d && d.ok) {
+      var visti = {};
+      (d.dati||[]).forEach(function(g) {
+        if (!visti[g.articolo]) {
+          visti[g.articolo] = true;
+          var opt = document.createElement('option');
+          opt.value = g.articolo;
+          opt.text  = g.articolo + ' (giac: ' + g.giacenza + ')';
+          sel.appendChild(opt);
+        }
+      });
+    }
+  });
+}
+
+function toggleLottoFields(tipo) {
+  var val = document.getElementById('car-tracc').value;
+  var div = document.getElementById('car-lotto-fields');
+  div.style.display = val === 'SI' ? 'block' : 'none';
+  if (val === 'NO') {
+    document.getElementById('car-lotto').value = 'N/A';
+    document.getElementById('car-scad').value  = '';
+  }
+}
+
+function caricaLottiScarico() {
+  var art = document.getElementById('sca-articolo').value;
+  if (!art) return;
+  api({action:'prodotto', sede:currentSede, codice:art}, function(d) {
+    if (d && d.ok && d.dati && d.dati.lotti && d.dati.lotti.length) {
+      var lotto = d.dati.lotti[0];
+      document.getElementById('sca-lotto').value = lotto.lotto || 'N/A';
+    }
+  });
+}
+
+function simulaScan(targetId) {
+  toast('Scanner attivo — funzione disponibile sul dispositivo mobile', 'info');
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────
+function submitForm(tipo) {
+  var dati = {};
+  var oggi = new Date().toISOString().split('T')[0];
+
+  if (tipo === 'carico') {
+    dati = {
+      sede: document.getElementById('car-sede').value,
+      lab:  document.getElementById('car-lab').value,
+      ordine: document.getElementById('car-ordine').value,
+      articolo: document.getElementById('car-articolo').value,
+      tracciabilita: document.getElementById('car-tracc').value,
+      lotto: document.getElementById('car-lotto').value,
+      scadenza: document.getElementById('car-scad').value,
+      collocazione: document.getElementById('car-colloc').value,
+      quantita: document.getElementById('car-qta').value,
+      data: document.getElementById('car-data').value || oggi,
+      tecnico: document.getElementById('car-tecnico').value,
+      note: document.getElementById('car-note').value,
+    };
+    if (!dati.sede || !dati.articolo || !dati.quantita) {
+      toast('Compila i campi obbligatori (sede, articolo, quantità)', 'error'); return;
+    }
+  } else if (tipo === 'apertura') {
+    dati = {
+      sede: document.getElementById('ape-sede').value,
+      lab:  document.getElementById('ape-lab').value,
+      articolo: document.getElementById('ape-articolo').value,
+      collocazione: document.getElementById('ape-colloc').value,
+      dataApertura: document.getElementById('ape-data').value || oggi,
+      tecnicoApertura: document.getElementById('ape-tecnico').value,
+      note: document.getElementById('ape-note').value,
+    };
+    if (!dati.sede || !dati.articolo) {
+      toast('Compila i campi obbligatori (sede, articolo)', 'error'); return;
+    }
+  } else if (tipo === 'scarico') {
+    dati = {
+      sede: document.getElementById('sca-sede').value,
+      lab:  document.getElementById('sca-lab').value,
+      articolo: document.getElementById('sca-articolo').value,
+      collocazione: document.getElementById('sca-colloc').value,
+      data: document.getElementById('sca-data').value || oggi,
+      tecnico: document.getElementById('sca-tecnico').value,
+      note: document.getElementById('sca-note').value,
+    };
+    if (!dati.sede || !dati.articolo) {
+      toast('Compila i campi obbligatori (sede, articolo)', 'error'); return;
+    }
+  }
+
+  toast('Invio in corso...', 'info');
+  apiPost({action: tipo, dati: dati}, function(d, err) {
+    if (err || !d) { toast('Errore di connessione', 'error'); return; }
+    if (!d.ok)     { toast('Errore: ' + d.errore, 'error'); return; }
+    toast(tipo.charAt(0).toUpperCase() + tipo.slice(1) + ' registrato (riga ' + d.riga + ')', 'success');
+    setTimeout(function(){ showPage('page-home'); loadHomeStats(); }, 1200);
+  });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function toast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type||'');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function _parseData(s) {
+  if (!s || s === 'N/A') return null;
+  var m = String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1]);
+  var m2 = String(s).match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
+  if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
+  return null;
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+setSede('CB');
+</script>
+</body>
+</html>
