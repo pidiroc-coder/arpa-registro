@@ -1023,8 +1023,14 @@ function loadArticoliSelect(selId) {
         visti[art] = true;
         var opt = document.createElement('option');
         opt.value = art;
-        var giac = isApe ? g.giacenza : g.giacenza;
-        opt.text  = art + ' (giac: ' + giac + ')';
+        var giac = g.giacenza;
+        if (isApe) {
+          opt.text = art + ' — da aprire: ' + giac;
+        } else if (isSca) {
+          opt.text = art + ' — giacenza: ' + giac;
+        } else {
+          opt.text = art + ' (giac: ' + giac + ')';
+        }
         // Per apertura: memorizza il primo lotto FEFO per autocompilazione
         if (isApe && g.lotti && g.lotti.length > 0) {
           // Ordina per scadenza (FEFO) e prendi il primo
@@ -1057,11 +1063,29 @@ function toggleLottoFields(tipo) {
 
 function caricaLottiScarico() {
   var art = document.getElementById('sca-articolo').value;
-  if (!art) return;
-  api({action:'prodotto', sede:currentSede, codice:art}, function(d) {
-    if (d && d.ok && d.dati && d.dati.lotti && d.dati.lotti.length) {
-      var lotto = d.dati.lotti[0];
-      document.getElementById('sca-lotto').value = lotto.lotto || 'N/A';
+  if (!art) { document.getElementById('sca-lotto').value = ''; return; }
+  // Cerca il lotto con apertura disponibile (non ancora scaricata)
+  // Usa giacenze per trovare il lotto con giacenza > 0
+  api({action:'giacenze', sede:currentSede}, function(d) {
+    if (!d || !d.ok) return;
+    var lotti = (d.dati||[]).filter(function(g) {
+      return g.articolo === art && g.giacenza > 0;
+    });
+    // Ordina FEFO
+    lotti.sort(function(a,b) {
+      var da = _parseData(a.scadenza), db = _parseData(b.scadenza);
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da - db;
+    });
+    if (lotti.length > 0) {
+      document.getElementById('sca-lotto').value  = lotti[0].lotto    || 'N/A';
+      document.getElementById('sca-tracc').value  = lotti[0].lotto === 'N/A' ? 'NO' : 'SI';
+      if (lotti[0].colloc)
+        document.getElementById('sca-colloc').value = lotti[0].colloc;
+    } else {
+      document.getElementById('sca-lotto').value = 'N/A';
     }
   });
 }
