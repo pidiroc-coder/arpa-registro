@@ -183,6 +183,41 @@
 
   /* ── BOTTOM NAV placeholder (padding) ── */
   .page-content { padding-bottom:20px; }
+
+  /* ── OVERLAY CLESSIDRA ── */
+  .overlay-wait {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(26,39,68,0.82);
+    flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  }
+  .overlay-wait.show { display:flex; }
+  .hourglass {
+    width:52px; height:52px;
+    border:4px solid rgba(255,255,255,0.2);
+    border-top-color:#60a5fa;
+    border-radius:50%;
+    animation:spin .9s linear infinite;
+  }
+  .overlay-wait p { color:#fff; font-size:16px; font-weight:500; letter-spacing:0.02em; }
+  .overlay-wait small { color:rgba(255,255,255,0.55); font-size:12px; }
+
+  /* ── MODAL SUCCESSO ── */
+  .modal-wrap {
+    display:none; position:fixed; inset:0; z-index:9998;
+    background:rgba(0,0,0,0.5);
+    align-items:center; justify-content:center;
+  }
+  .modal-wrap.show { display:flex; }
+  .modal-box {
+    background:#fff; border-radius:20px; padding:28px 24px;
+    max-width:320px; width:90%; text-align:center;
+    box-shadow:0 8px 32px rgba(0,0,0,0.18);
+  }
+  .modal-icon { font-size:48px; margin-bottom:12px; }
+  .modal-title { font-size:18px; font-weight:700; color:#16a34a; margin-bottom:6px; }
+  .modal-sub { font-size:14px; color:#64748b; margin-bottom:20px; line-height:1.5; }
+  .modal-btn { width:100%; padding:13px; border:none; border-radius:12px;
+    background:#16a34a; color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -632,6 +667,23 @@
     <div class="filter-chip" onclick="filterGiac(this,'scad')">In scadenza</div>
   </div>
   <div id="giacenzeList"><div class="loading"><div class="spinner"></div><p>Caricamento giacenze...</p></div></div>
+</div>
+
+<!-- OVERLAY ATTESA -->
+<div class="overlay-wait" id="overlayWait">
+  <div class="hourglass"></div>
+  <p>Registrazione in corso...</p>
+  <small>Attendere, non chiudere la pagina</small>
+</div>
+
+<!-- MODAL SUCCESSO -->
+<div class="modal-wrap" id="modalSuccesso">
+  <div class="modal-box">
+    <div class="modal-icon">&#10003;</div>
+    <div class="modal-title">Operazione conclusa<br>con successo!</div>
+    <div class="modal-sub" id="modalSubtesto"></div>
+    <button class="modal-btn" onclick="chiudiModalSuccesso()">OK</button>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -1095,7 +1147,13 @@ function simulaScan(targetId) {
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
+var _submitting = false; // guard contro doppio invio
+
 function submitForm(tipo) {
+  if (_submitting) {
+    toast('Operazione gi\u00e0 in corso, attendi...', 'info');
+    return;
+  }
   var oggi = new Date().toLocaleDateString('it-IT').split('/').reverse().join('-');
   var params = {action: tipo};
 
@@ -1143,22 +1201,39 @@ function submitForm(tipo) {
     }
   }
 
-  toast('Invio in corso...', 'info');
+  _submitting = true;
+  var btn = document.querySelector('.submit-btn.submit-' + tipo);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  // Mostra clessidra
+  mostraAttesa(true);
+
   // Usa GET invece di POST per evitare problemi CORS
   api(params, function(d, err) {
-    if (err || !d) { toast('Errore di connessione', 'error'); return; }
-    if (!d.ok)     { toast('Errore: ' + d.errore, 'error'); return; }
-    var msg = {
-      carico:   '\u2705 CARICO registrato correttamente!',
-      apertura: '\u2705 APERTURA registrata correttamente!',
-      scarico:  '\u2705 SCARICO registrato correttamente!'
-    };
-    toast(msg[tipo] || '\u2705 Operazione eseguita correttamente!', 'success');
-    // Mostra anche alert modale per conferma visibile
-    setTimeout(function(){
-      showPage('page-home');
-      loadHomeStats();
-    }, 2500);
+    // Nascondi clessidra
+    mostraAttesa(false);
+    _submitting = false;
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+    if (err || !d) {
+      toast('Errore di connessione. Verifica la connessione e riprova.', 'error');
+      return;
+    }
+    if (!d.ok) {
+      toast('Errore: ' + (d.errore || 'sconosciuto'), 'error');
+      return;
+    }
+
+    // Torna alla home
+    showPage('page-home');
+    loadHomeStats();
+
+    // Mostra modal "Operazione conclusa con successo"
+    setTimeout(function() {
+      mostraModalSuccesso(tipo, d.riga);
+      // Toast con riga registrata (appare sotto il modal)
+      toast('\u2705 Riga ' + d.riga + ' registrata nel foglio', 'success');
+    }, 200);
   });
 }
 
@@ -1168,7 +1243,28 @@ function toast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show ' + (type||'');
   clearTimeout(t._tid);
-  t._tid = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  var dur = (type === 'success') ? 6000 : 3000;
+  t._tid = setTimeout(function(){ t.classList.remove('show'); }, dur);
+}
+
+function mostraAttesa(show) {
+  var ov = document.getElementById('overlayWait');
+  if (ov) ov.classList.toggle('show', show);
+}
+
+function mostraModalSuccesso(tipo, riga) {
+  var nomi = {carico:'CARICO', apertura:'APERTURA', scarico:'SCARICO'};
+  var nomeOp = nomi[tipo] || tipo.toUpperCase();
+  document.getElementById('modalSubtesto').innerHTML =
+    '<strong>' + nomeOp + '</strong> registrato correttamente nel foglio.<br>' +
+    '<span style="color:#16a34a;font-weight:600;">Riga ' + riga + '</span>';
+  var modal = document.getElementById('modalSuccesso');
+  if (modal) modal.classList.add('show');
+}
+
+function chiudiModalSuccesso() {
+  var modal = document.getElementById('modalSuccesso');
+  if (modal) modal.classList.remove('show');
 }
 
 function _parseData(s) {
