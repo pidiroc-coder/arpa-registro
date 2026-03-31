@@ -321,11 +321,7 @@
     <div class="field-row">
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
-        <select id="car-lab">
-          <option>LAB. CHIMICO</option>
-          <option>LAB. BIOLOGICO</option>
-          <option>LAB. FISICO</option>
-        </select>
+        <select id="car-lab"><option value="">caricamento...</option></select>
       </div>
       <div class="field">
         <label>Ordine <span class="req">*</span></label>
@@ -448,7 +444,7 @@
       </div>
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
-        <select id="ape-lab"><option>LAB. CHIMICO</option><option>LAB. BIOLOGICO</option><option>LAB. FISICO</option></select>
+        <select id="ape-lab"><option value="">caricamento...</option></select>
       </div>
     </div>
     <div class="field">
@@ -521,7 +517,7 @@
       </div>
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
-        <select id="sca-lab"><option>LAB. CHIMICO</option><option>LAB. BIOLOGICO</option><option>LAB. FISICO</option></select>
+        <select id="sca-lab"><option value="">caricamento...</option></select>
       </div>
     </div>
     <div class="field">
@@ -643,7 +639,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/s/AKfycbwQnqEH97bSlMPiVL55h-pS9yCxM_oPfx07wKO7jNMi36DGnFVrBjMl3TAMg50r_caFYg/exec';  // ← inserisci URL distribuzione GAS
+var BASE_URL = 'https://script.google.com/macros/s/AKfycbwQnqEH97bSlMPiVL55h-pS9yCxM_oPfx07wKO7jNMi36DGnFVrBjMl3TAMg50r_caFYg/exec'; // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -667,9 +663,10 @@ function showPage(id) {
 
 function showForm(tipo) {
   var oggi = new Date().toISOString().split('T')[0];
-  // Carica tecnici e collocazioni per i datalist
-  _loadDatalist('list-tecnici', {action:'tecnici', sede:currentSede});
+  // Carica tecnici, collocazioni e laboratori
+  _loadDatalist('list-tecnici', {action:'tecnici',      sede:currentSede});
   _loadDatalist('list-colloc',  {action:'collocazioni', sede:currentSede});
+  _loadSelect(['car-lab','ape-lab','sca-lab'], {action:'laboratori', sede:currentSede});
 
   if (tipo === 'carico') {
     document.getElementById('car-sede').value = currentSede;
@@ -702,6 +699,21 @@ function _loadDatalist(listId, params) {
     dl.innerHTML = (d.dati || []).map(function(v) {
       return '<option value="' + v + '">';
     }).join('');
+  });
+}
+
+// Popola uno o più <select> con i valori dall'API
+function _loadSelect(ids, params) {
+  api(params, function(d) {
+    if (!d || !d.ok || !d.dati) return;
+    var opts = '<option value="">— seleziona —</option>' +
+      d.dati.map(function(v) {
+        return '<option value="' + v + '">' + v + '</option>';
+      }).join('');
+    (Array.isArray(ids) ? ids : [ids]).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = opts;
+    });
   });
 }
 
@@ -1095,8 +1107,17 @@ function submitForm(tipo) {
   api(params, function(d, err) {
     if (err || !d) { toast('Errore di connessione', 'error'); return; }
     if (!d.ok)     { toast('Errore: ' + d.errore, 'error'); return; }
-    toast(tipo.charAt(0).toUpperCase()+tipo.slice(1)+' registrato (riga '+d.riga+')', 'success');
-    setTimeout(function(){ showPage('page-home'); loadHomeStats(); }, 1200);
+    var msg = {
+      carico:   '\u2705 CARICO registrato correttamente!',
+      apertura: '\u2705 APERTURA registrata correttamente!',
+      scarico:  '\u2705 SCARICO registrato correttamente!'
+    };
+    toast(msg[tipo] || '\u2705 Operazione eseguita correttamente!', 'success');
+    // Mostra anche alert modale per conferma visibile
+    setTimeout(function(){
+      showPage('page-home');
+      loadHomeStats();
+    }, 2500);
   });
 }
 
