@@ -348,15 +348,12 @@
   </div>
 
   <div class="form-section">
-    <div class="form-section-title">Identificazione</div>
-    <div class="field">
-      <label>Sede <span class="req">*</span></label>
-      <select id="car-sede"><option value="">— seleziona sede —</option><option value="CB">CB — Campobasso</option><option value="IS">IS — Isernia</option></select>
-    </div>
+    <div class="form-section-title">Identificazione — Sede: <span id="car-sede-label" style="color:var(--acc);font-weight:700;"></span></div>
+    <input type="hidden" id="car-sede">
     <div class="field-row">
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
-        <select id="car-lab"><option value="">caricamento...</option></select>
+        <select id="car-lab"><option value="">— seleziona —</option></select>
       </div>
       <div class="field">
         <label>Ordine <span class="req">*</span></label>
@@ -472,15 +469,11 @@
 
   <div class="form-section">
     <div class="form-section-title">Sede e Prodotto</div>
-    <div class="field-row">
-      <div class="field">
-        <label>Sede <span class="req">*</span></label>
-        <select id="ape-sede"><option value="">— sede —</option><option value="CB">CB</option><option value="IS">IS</option></select>
-      </div>
-      <div class="field">
-        <label>Laboratorio <span class="req">*</span></label>
-        <select id="ape-lab"><option value="">caricamento...</option></select>
-      </div>
+        <div class="form-section-title">Sede e Prodotto — Sede: <span id="ape-sede-label" style="color:var(--acc);font-weight:700;"></span></div>
+    <input type="hidden" id="ape-sede">
+    <div class="field">
+      <label>Laboratorio <span class="req">*</span></label>
+      <select id="ape-lab"><option value="">— seleziona —</option></select>
     </div>
     <div class="field">
       <div class="scan-btn" onclick="simulaScan('ape-articolo')">
@@ -544,16 +537,11 @@
   </div>
 
   <div class="form-section">
-    <div class="form-section-title">Sede e Prodotto</div>
-    <div class="field-row">
-      <div class="field">
-        <label>Sede <span class="req">*</span></label>
-        <select id="sca-sede"><option value="">— sede —</option><option value="CB">CB</option><option value="IS">IS</option></select>
-      </div>
-      <div class="field">
-        <label>Laboratorio <span class="req">*</span></label>
-        <select id="sca-lab"><option value="">caricamento...</option></select>
-      </div>
+    <div class="form-section-title">Sede e Prodotto — Sede: <strong id="sca-sede-label" style="color:var(--acc);"></strong></div>
+    <input type="hidden" id="sca-sede">
+    <div class="field">
+      <label>Laboratorio <span class="req">*</span></label>
+      <select id="sca-lab"><option value="">— seleziona —</option></select>
     </div>
     <div class="field">
       <div class="scan-btn" onclick="simulaScan('sca-articolo')">
@@ -742,21 +730,27 @@ function showForm(tipo) {
 
   if (tipo === 'carico') {
     document.getElementById('car-sede').value = currentSede;
+    var lbl = document.getElementById('car-sede-label');
+    if (lbl) lbl.textContent = currentSede;
     document.getElementById('car-data').value = oggi;
+    svuotaForm('carico');
     loadOrdiniSelect('car-ordine');
     loadArticoliSelect('car-articolo');
     showPage('page-form-carico');
   } else if (tipo === 'apertura') {
     document.getElementById('ape-sede').value = currentSede;
+    var lblA = document.getElementById('ape-sede-label');
+    if (lblA) lblA.textContent = currentSede;
     document.getElementById('ape-data').value = oggi;
-    // Azzera campi lotto
-    document.getElementById('ape-lotto').value = '';
-    document.getElementById('ape-scad').value  = '';
+    svuotaForm('apertura');
     loadArticoliSelect('ape-articolo');
     showPage('page-form-apertura');
   } else if (tipo === 'scarico') {
     document.getElementById('sca-sede').value = currentSede;
+    var lblS = document.getElementById('sca-sede-label');
+    if (lblS) lblS.textContent = currentSede;
     document.getElementById('sca-data').value = oggi;
+    svuotaForm('scarico');
     loadArticoliSelect('sca-articolo');
     showPage('page-form-scarico');
   }
@@ -801,6 +795,7 @@ function _loadSelect(ids, params) {
       d.dati.map(function(v) {
         return '<option value="' + v + '">' + v + '</option>';
       }).join('');
+    // Anche i datalist: aggiorna il placeholder del campo correlato
     idList.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.innerHTML = opts;
@@ -818,16 +813,26 @@ function setSede(s) {
   if (ovP) ovP.textContent  = 'Cambio sede ' + s + ' in corso...';
   if (ovS) ovS.textContent  = 'Caricamento dati, attendere...';
 
-  // Aggiorna i bottoni subito
+  // P4: svuota tutti i form aperti prima di cambiare sede
+  svuotaForm('carico'); svuotaForm('apertura'); svuotaForm('scarico');
+  _clearLottiScarico();
+
   currentSede = s;
   document.getElementById('btnCB').classList.toggle('active', s === 'CB');
   document.getElementById('btnIS').classList.toggle('active', s === 'IS');
   document.getElementById('userBadge').textContent = s;
+  // Aggiorna label sede nei form
+  ['car','ape','sca'].forEach(function(p) {
+    var el = document.getElementById(p + '-sede');
+    if (el) el.value = s;
+    var lb = document.getElementById(p + '-sede-label');
+    if (lb) lb.textContent = s;
+  });
   document.getElementById('homeSubtitle').textContent = 'Sede ' + s + ' — caricamento...';
   document.getElementById('countOrdini').textContent  = 'caricamento...';
   document.getElementById('alertBar').classList.add('hidden');
 
-  // Conta le chiamate API da attendere (ordini + scadenze = 2)
+  // P3: pending = 2 (ordini + scadenze), nessun onDone spurio
   var pending = 2;
   function onDone() {
     pending--;
@@ -838,7 +843,6 @@ function setSede(s) {
     }
   }
 
-  // Chiama ordini
   api({action:'ordini', sede:s}, function(d) {
     if (d && d.ok) {
       _dataOrdini = d.dati || [];
@@ -848,7 +852,6 @@ function setSede(s) {
     onDone();
   });
 
-  // Chiama scadenze
   api({action:'scadenze', sede:s, giorni:30}, function(d) {
     var ab = document.getElementById('alertBar');
     if (d && d.ok) {
@@ -868,7 +871,6 @@ function setSede(s) {
     onDone();
   });
 
-  // Sicurezza: nascondi overlay dopo 20s anche se le API non rispondono
   clearTimeout(window._sedeTid);
   window._sedeTid = setTimeout(function() {
     if (ov) ov.style.display = 'none';
@@ -1260,12 +1262,8 @@ function _buildLottiScarico(lotti) {
     if (lot && lot.colloc) document.getElementById('sca-colloc').value = lot.colloc;
   };
   field.appendChild(selLot);
-  // Preseleziona primo lotto FEFO
-  if (lotti.length > 0) {
-    selLot.value = lotti[0].lotto || '';
-    document.getElementById('sca-lotto').value = lotti[0].lotto || 'N/A';
-    if (lotti[0].colloc) document.getElementById('sca-colloc').value = lotti[0].colloc;
-  }
+  // P5: NON preseleziona - utente sceglie esplicitamente
+  document.getElementById('sca-lotto').value = '';
 }
 
 function _clearLottiScarico() {
