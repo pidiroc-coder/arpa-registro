@@ -96,11 +96,12 @@
   .field label { display:block; font-size:12px; font-weight:600; color:var(--txt2); margin-bottom:5px; }
   .field label .req { color:var(--ros); margin-left:2px; }
   .field input, .field select, .field textarea {
-    width:100%; border:1.5px solid var(--bord); border-radius:var(--radSm); padding:10px 12px;
-    font-size:14px; color:var(--txt); background:var(--bg); outline:none; transition:border .15s;
+    width:100%; border:1.5px solid #86efac; border-radius:var(--radSm); padding:10px 12px;
+    font-size:14px; color:var(--txt); background:#f0fdf4; outline:none; transition:border .15s;
     -webkit-appearance:none; appearance:none;
   }
-  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--acc); background:#fff; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--grn); background:#fff; }
+  .field-auto input { background:#f8fafc !important; border-color:var(--bord) !important; }
   .field textarea { min-height:70px; resize:none; line-height:1.5; }
   .field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .field-auto { position:relative; }
@@ -254,12 +255,13 @@
     <p id="homeSubtitle">Sede CB — caricamento...</p>
   </div>
 
-  <div class="alert-bar hidden" id="alertBar">
+  <div class="alert-bar hidden" id="alertBar" onclick="mostraDettagliScadenze()" style="cursor:pointer;">
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <path d="M9 2L16 15H2L9 2Z" stroke="#b45309" stroke-width="1.5" fill="#fef3c7"/>
       <path d="M9 7v4M9 13v.5" stroke="#b45309" stroke-width="1.5" stroke-linecap="round"/>
     </svg>
     <p id="alertText"></p>
+    <span style="font-size:11px;color:#b45309;margin-left:auto;white-space:nowrap;">Tocca &#8250;</span>
   </div>
 
   <div class="op-grid">
@@ -378,23 +380,23 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>UDM</label>
-        <input type="text" id="car-udm" placeholder="auto">
+        <input type="text" id="car-udm">
         <span class="auto-tag">auto</span>
       </div>
       <div class="field">
         <label>Quantità <span class="req">*</span></label>
-        <input type="number" id="car-qta" placeholder="es. 2" min="1">
+        <input type="number" id="car-qta" min="1">
       </div>
     </div>
     <div class="field-row">
       <div class="field field-auto">
         <label>Conto</label>
-        <input type="text" id="car-conto" placeholder="auto">
+        <input type="text" id="car-conto">
         <span class="auto-tag">auto</span>
       </div>
       <div class="field field-auto">
         <label>Gruppo</label>
-        <input type="text" id="car-gruppo" placeholder="auto">
+        <input type="text" id="car-gruppo">
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -414,7 +416,7 @@
       <div class="field-row">
         <div class="field">
           <label>N. Lotto <span class="req">*</span></label>
-          <input type="text" id="car-lotto" placeholder="es. LOT2025001">
+          <input type="text" id="car-lotto">
         </div>
         <div class="field">
           <label>Scadenza <span class="req">*</span></label>
@@ -424,11 +426,11 @@
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="car-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A" autocomplete="off">
+      <input type="text" id="car-colloc" onclick="riapreDatelist(this)" list="list-colloc" autocomplete="off">
     </div>
     <div class="field field-auto">
       <label>Fornitore</label>
-      <input type="text" id="car-fornit" placeholder="auto da ordine" readonly>
+      <input type="text" id="car-fornit" readonly>
       <span class="auto-tag">auto</span>
     </div>
   </div>
@@ -442,14 +444,14 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="car-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
+        <input type="text" id="car-tecnico" onclick="riapreDatelist(this)" list="list-tecnici" autocomplete="off">
         <datalist id="list-tecnici"></datalist>
         <datalist id="list-colloc"></datalist>
       </div>
     </div>
     <div class="field">
       <label>Note</label>
-      <textarea id="car-note" placeholder="Inserisci eventuali note..."></textarea>
+      <textarea id="car-note"></textarea>
     </div>
   </div>
 
@@ -498,13 +500,13 @@
       </div>
       <div class="field field-auto">
         <label>Scadenza</label>
-        <input type="text" id="ape-scad" placeholder="auto" readonly>
+        <input type="text" id="ape-scad" readonly>
         <span class="auto-tag">auto</span>
       </div>
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="ape-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / FRIGO A" autocomplete="off">
+      <input type="text" id="ape-colloc" onclick="riapreDatelist(this)" list="list-colloc" autocomplete="off">
     </div>
   </div>
 
@@ -517,12 +519,12 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="ape-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
+        <input type="text" id="ape-tecnico" onclick="riapreDatelist(this)" list="list-tecnici" autocomplete="off">
       </div>
     </div>
     <div class="field">
       <label>Note</label>
-      <textarea id="ape-note" placeholder="Inserisci eventuali note..."></textarea>
+      <textarea id="ape-note"></textarea>
     </div>
   </div>
 
@@ -566,18 +568,18 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>N. Lotto</label>
-        <input type="text" id="sca-lotto" placeholder="auto" readonly>
+        <input type="text" id="sca-lotto" readonly>
         <span class="auto-tag">auto</span>
       </div>
       <div class="field field-auto">
         <label>Tracciabilità</label>
-        <input type="text" id="sca-tracc" placeholder="auto" readonly>
+        <input type="text" id="sca-tracc" readonly>
         <span class="auto-tag">auto</span>
       </div>
     </div>
     <div class="field">
       <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="sca-colloc" list="list-colloc" placeholder="es. LAB. CHIMICO / SCAFFALE A" autocomplete="off">
+      <input type="text" id="sca-colloc" onclick="riapreDatelist(this)" list="list-colloc" autocomplete="off">
     </div>
   </div>
 
@@ -590,12 +592,12 @@
       </div>
       <div class="field">
         <label>Tecnico <span class="req">*</span></label>
-        <input type="text" id="sca-tecnico" list="list-tecnici" placeholder="es. DI ROCCO" autocomplete="off">
+        <input type="text" id="sca-tecnico" onclick="riapreDatelist(this)" list="list-tecnici" autocomplete="off">
       </div>
     </div>
     <div class="field">
       <label>Note</label>
-      <textarea id="sca-note" placeholder="Inserisci eventuali note..."></textarea>
+      <textarea id="sca-note"></textarea>
     </div>
   </div>
 
@@ -611,6 +613,10 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Ordini</h2>
+  </div>
+  <div class="search-wrap" style="margin-bottom:8px;">
+    <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input type="text" id="ordSearch" oninput="renderOrdini()" style="padding-left:38px;" placeholder="Cerca ordine...">
   </div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="filterOrdini(this,'ALL')">Tutti</div>
@@ -657,6 +663,10 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1110.5-4M13 1v4H9" stroke="var(--txt2)" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
   </div>
+  <div class="search-wrap" style="margin-bottom:8px;">
+    <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <input type="text" id="giacSearch" oninput="renderGiacenze()" style="padding-left:38px;" placeholder="Cerca prodotto...">
+  </div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="filterGiac(this,'ALL')">Tutti</div>
     <div class="filter-chip" onclick="filterGiac(this,'ok')">Disponibili</div>
@@ -684,12 +694,20 @@
   </div>
 </div>
 
+<!-- MODAL DETTAGLIO GENERICO -->
+<div class="modal-wrap" id="modalDettaglio" style="display:none;" onclick="this.style.display='none'">
+  <div class="modal-box" style="max-width:360px;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+    <div id="modalDettaglioContenuto"></div>
+    <button class="modal-btn" style="margin-top:14px;background:var(--blu);" onclick="document.getElementById('modalDettaglio').style.display='none'">Chiudi</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/s/AKfycbwQnqEH97bSlMPiVL55h-pS9yCxM_oPfx07wKO7jNMi36DGnFVrBjMl3TAMg50r_caFYg/exec';  // ← inserisci URL distribuzione GAS
+var BASE_URL = 'https://script.google.com/macros/s/AKfycbyI9awYl5NVQwKN1g29GzEjw_Zoardm9nSEinmtAJ6rFHoxym8nYA_3JNjW2pU3tfjyUw/exec';  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -744,6 +762,12 @@ function showForm(tipo) {
   }
 }
 
+// P7/P9: click su input datalist -> svuota e riapre
+function riapreDatelist(el) {
+  el.value = '';
+  el.focus();
+}
+
 // Popola un <datalist> con i valori dall'API
 function _loadDatalist(listId, params) {
   var dl = document.getElementById(listId);
@@ -786,11 +810,20 @@ function _loadSelect(ids, params) {
 
 // ── SEDE ────────────────────────────────────────────────────
 function setSede(s) {
-  currentSede = s;
-  document.getElementById('btnCB').classList.toggle('active', s === 'CB');
-  document.getElementById('btnIS').classList.toggle('active', s === 'IS');
-  document.getElementById('userBadge').textContent = s;
-  loadHomeStats();
+  if (s === currentSede) return;
+  var ov = document.getElementById('overlayWait');
+  var ovP = document.querySelector('#overlayWait p');
+  if (ov) ov.style.display='flex';
+  if (ovP) ovP.textContent='Cambio sede in corso...';
+  setTimeout(function() {
+    currentSede = s;
+    document.getElementById('btnCB').classList.toggle('active', s==='CB');
+    document.getElementById('btnIS').classList.toggle('active', s==='IS');
+    document.getElementById('userBadge').textContent = s;
+    loadHomeStats();
+    if (ov) ov.style.display='none';
+    if (ovP) ovP.textContent='Registrazione in corso...';
+  }, 800);
 }
 
 // ── API CALL ─────────────────────────────────────────────────
@@ -827,9 +860,10 @@ function loadHomeStats() {
   api({action:'scadenze', sede:currentSede, giorni:30}, function(d) {
     if (d && d.ok && d.totaleAlert > 0) {
       var ab = document.getElementById('alertBar');
+      _lastScadenze = d;
       document.getElementById('alertText').innerHTML =
         '<strong>' + d.totaleAlert + ' alert:</strong> ' +
-        d.inScadenza.length + ' prodotti in scadenza, ' +
+        d.inScadenza.length + ' in scadenza, ' +
         d.sottoSoglia.length + ' sotto soglia';
       ab.classList.remove('hidden');
     }
@@ -914,8 +948,9 @@ function renderRegistro() {
     return tipoOk && txtOk;
   });
   if (!data.length) { list.innerHTML = '<div class="empty">Nessun movimento trovato</div>'; return; }
-  list.innerHTML = '<div class="mov-list">' + data.map(function(m) {
-    return '<div class="mov-card"><div class="mov-top">' +
+  window._movFiltered = data;
+  list.innerHTML = '<div class="mov-list">' + data.map(function(m, idx) {
+    return '<div class="mov-card" onclick="mostraDettaglioMovimento(window._movFiltered['+idx+'])" style="cursor:pointer;"><div class="mov-top">' +
       '<span class="mov-tipo ' + m.tipo + '">' + m.tipo + '</span>' +
       '<span class="mov-data">' + (m.data||'—') + '</span>' +
       '</div><div class="mov-art">' + m.articolo + '</div>' +
@@ -946,8 +981,10 @@ function filterGiac(el, f) {
 
 function renderGiacenze() {
   var list = document.getElementById('giacenzeList');
+  var search = ((document.getElementById('giacSearch')||{}).value||'').toLowerCase();
   var oggi = new Date();
   var data = _dataGiacenze.filter(function(g) {
+    if (search && g.articolo.toLowerCase().indexOf(search) === -1) return false;
     if (giacFilter === 'ALL')  return true;
     if (giacFilter === 'zero') return g.giacenza <= 0;
     if (giacFilter === 'ok')   return g.giacenza > 0;
@@ -959,14 +996,15 @@ function renderGiacenze() {
     return true;
   });
   if (!data.length) { list.innerHTML = '<div class="empty">Nessuna giacenza trovata</div>'; return; }
-  list.innerHTML = data.map(function(g) {
+  window._giacFiltered = data;
+  list.innerHTML = data.map(function(g, idx) {
     var cls  = g.giacenza <= 0 ? 'giac-zero' : g.giacenza <= 5 ? 'giac-warn' : 'giac-ok';
     var scadDt = _parseData(g.scadenza);
     var scadWarn = scadDt && scadDt <= new Date(oggi.getTime() + 30*86400000);
     var gg = scadDt ? Math.ceil((scadDt - oggi) / 86400000) : null;
     var scadLabel = g.scadenza || '—';
     if (gg !== null && gg <= 30) scadLabel += gg < 0 ? ' ⚠ scaduto' : ' (' + gg + 'gg)';
-    return '<div class="giac-card">' +
+    return '<div class="giac-card" onclick="mostraDettaglioGiacenza(window._giacFiltered['+idx+'])" style="cursor:pointer;">' +
       '<div class="giac-top">' +
       '<span class="giac-art">' + g.articolo + '</span>' +
       '<span class="giac-badge ' + cls + '">' + g.giacenza + ' ' + (g.udm||'') + '</span>' +
@@ -1060,7 +1098,7 @@ function loadArticoliSelect(selId) {
   var isSca = selId === 'sca-articolo';
   var apiParams = isApe
     ? {action:'lotti_apertura', sede:currentSede}
-    : {action:'giacenze', sede:currentSede};
+    : {action:'giacenze', sede:currentSede, soloDisponibili:'1'};
 
   api(apiParams, function(d) {
     sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
@@ -1141,7 +1179,7 @@ function caricaLottiScarico() {
 }
 
 function simulaScan(targetId) {
-  toast('Scanner attivo — funzione disponibile sul dispositivo mobile', 'info');
+  toast('Scanner non ancora attivo: i codici non sono ancora associati ai prodotti.', 'info');
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
@@ -1225,7 +1263,7 @@ function submitForm(tipo) {
       return;
     }
 
-    // Torna alla home
+    svuotaForm(tipo);
     showPage('page-home');
     loadHomeStats();
 
@@ -1260,8 +1298,8 @@ function mostraAttesa(show) {
       _submitting = false;
       var btns = document.querySelectorAll('.submit-btn');
       btns.forEach(function(b){ b.disabled=false; b.style.opacity='1'; });
-      toast('Timeout: operazione troppo lenta. Riprova.', 'error');
-    }, 30000);
+      toast('Tempo scaduto (60s). Verifica nel foglio se l\'operazione e\' stata registrata.', 'error');
+    }, 60000);
   }
 }
 
@@ -1280,6 +1318,83 @@ function chiudiModalSuccesso() {
   if (modal) modal.style.display = 'none';
 }
 
+function svuotaForm(tipo) {
+  var p = tipo === 'carico' ? 'car' : tipo === 'apertura' ? 'ape' : 'sca';
+  document.querySelectorAll('[id^="' + p + '-"]').forEach(function(el) {
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  if (tipo === 'carico') {
+    var lf = document.getElementById('car-lotto-fields');
+    if (lf) lf.style.display = 'none';
+  }
+}
+
+// P4/P13: mostra modal dettaglio
+function mostraDettaglio(html) {
+  document.getElementById('modalDettaglioContenuto').innerHTML = html;
+  document.getElementById('modalDettaglio').style.display = 'flex';
+}
+
+function mostraDettaglioOrdine(o) {
+  var stato = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
+  var prods = (o.prodotti||[]).map(function(p) {
+    var qO=parseFloat(p.qtaOrd)||0, qC=parseFloat(p.qtaCar)||0;
+    var pct = qO>0 ? Math.round(qC/qO*100) : 0;
+    return '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;">'
+      + '<div style="font-weight:600;font-size:13px;margin-bottom:4px;">' + p.articolo + '</div>'
+      + '<div style="font-size:12px;color:#64748b;">Ordinato: ' + qO + ' &mdash; Caricato: ' + qC + '</div>'
+      + '<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-top:6px;">'
+      + '<div style="height:6px;border-radius:4px;background:#3b82f6;width:' + pct + '%"></div></div>'
+      + (p.fornitore ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">Fornitore: ' + p.fornitore + '</div>' : '')
+      + '</div>';
+  }).join('');
+  mostraDettaglio(
+    '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">' + o.id + '</div>'
+    + '<span class="ord-stato ' + stato + '" style="margin-bottom:12px;display:inline-block;">' + (o.stato||'—') + '</span>'
+    + '<div style="font-size:12px;color:#64748b;margin-bottom:12px;">Sede: ' + o.sede + '</div>'
+    + prods);
+}
+
+function mostraDettaglioMovimento(m) {
+  mostraDettaglio(
+    '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">' + m.articolo + '</div>'
+    + '<table style="width:100%;font-size:13px;border-collapse:collapse;">'
+    + _rigaDett('Tipo', '<span class="mov-tipo ' + m.tipo + '">' + m.tipo + '</span>')
+    + _rigaDett('Sede', m.sede)
+    + _rigaDett('Data', m.data||m.dataApe||'—')
+    + _rigaDett('Tecnico', m.tecnico||m.tecnicoApe||'—')
+    + _rigaDett('Lotto', m.lotto||'—')
+    + _rigaDett('Quantit&agrave;', m.quantita||'—')
+    + _rigaDett('Ordine', m.ordine||'—')
+    + _rigaDett('Collocazione', m.colloc||'—')
+    + _rigaDett('Note', m.note||'—')
+    + '</table>');
+}
+
+function mostraDettaglioGiacenza(g) {
+  var oggi = new Date();
+  var scadDt = _parseData(g.scadenza);
+  var gg = scadDt ? Math.ceil((scadDt-oggi)/86400000) : null;
+  var scadInfo = g.scadenza || '—';
+  if (gg !== null && gg <= 30) scadInfo += gg < 0 ? ' (SCADUTO)' : ' (' + gg + ' giorni)';
+  mostraDettaglio(
+    '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">' + g.articolo + '</div>'
+    + '<table style="width:100%;font-size:13px;border-collapse:collapse;">'
+    + _rigaDett('Sede', g.sede)
+    + _rigaDett('Giacenza', '<strong>' + g.giacenza + '</strong>')
+    + _rigaDett('Lotto', g.lotto||'—')
+    + _rigaDett('Scadenza', scadInfo)
+    + _rigaDett('Collocazione', g.colloc||'—')
+    + _rigaDett('Ordine', g.ordine||'—')
+    + '</table>');
+}
+
+function _rigaDett(label, val) {
+  return '<tr><td style="padding:5px 0;color:#64748b;width:40%;">' + label
+    + '</td><td style="padding:5px 0;">' + (val||'—') + '</td></tr>';
+}
+
 function _parseData(s) {
   if (!s || s === 'N/A') return null;
   var m = String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
@@ -1287,6 +1402,25 @@ function _parseData(s) {
   var m2 = String(s).match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/);
   if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
   return null;
+}
+
+// P18: mostra dettaglio scadenze al click sull'alert
+var _lastScadenze = null;
+function mostraDettagliScadenze() {
+  if (!_lastScadenze) return;
+  var righe = (_lastScadenze.inScadenza||[]).map(function(s) {
+    return _rigaDett(s.articolo,
+      '<span style="color:' + (s.scaduto?'#dc2626':'#d97706') + ';font-weight:600;">'
+      + s.scadenza + (s.scaduto?' (SCADUTO)':' ('+s.giorniMancanti+'gg)') + '</span>');
+  }).join('');
+  var sot = (_lastScadenze.sottoSoglia||[]).map(function(s) {
+    return _rigaDett(s.articolo,
+      '<span style="color:#dc2626;">giac: '+s.giacenza+' / soglia: '+s.soglia+'</span>');
+  }).join('');
+  mostraDettaglio(
+    '<div style="font-weight:700;font-size:15px;margin-bottom:12px;">Alert prodotti</div>'
+    + (righe ? '<div style="font-weight:600;font-size:12px;color:#b45309;margin-bottom:6px;">In scadenza:</div><table style="width:100%;font-size:12px;">'+righe+'</table>' : '')
+    + (sot ? '<div style="font-weight:600;font-size:12px;color:#dc2626;margin:10px 0 6px;">Sotto soglia:</div><table style="width:100%;font-size:12px;">'+sot+'</table>' : ''));
 }
 
 // ── INIT ──────────────────────────────────────────────────────
