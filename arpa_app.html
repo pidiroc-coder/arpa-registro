@@ -949,11 +949,16 @@ function filterOrdini(el, stato) {
 
 function renderOrdini() {
   var list = document.getElementById('ordiniList');
-  var data = _dataOrdini.filter(function(o){
-    return ordStatoFilter === 'ALL' || o.stato === ordStatoFilter;
+  var search = ((document.getElementById('ordSearch')||{}).value||'').toLowerCase();
+  var data = _dataOrdini.filter(function(o) {
+    var statoOk = ordStatoFilter === 'ALL' || o.stato === ordStatoFilter;
+    var txtOk = !search || o.id.toLowerCase().indexOf(search) !== -1 ||
+      (o.prodotti||[]).some(function(p){ return p.articolo.toLowerCase().indexOf(search) !== -1; });
+    return statoOk && txtOk;
   });
   if (!data.length) { list.innerHTML = '<div class="empty">Nessun ordine trovato</div>'; return; }
-  list.innerHTML = data.map(function(o) {
+  window._ordiniFiltered = data;
+  list.innerHTML = data.map(function(o, idx) {
     var cls = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
     var prods = (o.prodotti||[]).map(function(p){
       var qOrd = parseFloat(p.qtaOrd)||0;
@@ -963,10 +968,12 @@ function renderOrdini() {
         ' <span style="color:var(--txt3);">' + qCar + '/' + qOrd + ' ' + (p.udm||'') + '</span></div>' +
         '<div class="ord-progress"><div class="ord-progress-bar" style="width:'+pct+'%"></div></div>';
     }).join('');
-    return '<div class="ord-card"><div class="ord-top">' +
+    return '<div class="ord-card" onclick="mostraDettaglioOrdine(window._ordiniFiltered[' + idx + '])" style="cursor:pointer;">' +
+      '<div class="ord-top">' +
       '<span class="ord-id">' + o.id + '</span>' +
       '<span class="ord-stato ' + cls + '">' + (o.stato||'—') + '</span>' +
-      '</div>' + prods + '</div>';
+      '</div>' + prods +
+      '<div style="font-size:11px;color:var(--txt3);margin-top:6px;">&#9654; Tocca per i dettagli</div></div>';
   }).join('');
 }
 
@@ -1234,8 +1241,9 @@ function caricaLottiScarico() {
     // Tracciabilità SI: dropdown lotti FEFO (scadenza più vicina prima)
     _buildLottiScarico(lotti);
   } else {
-    // Tracciabilità NO: autocompila con primo lotto FEFO
-    document.getElementById('sca-lotto').value = lotti.length ? (lotti[0].lotto || 'N/A') : 'N/A';
+    // Tracciabilità NO: mostra lotto FEFO con asterisco
+    var lottoFefo = lotti.length ? (lotti[0].lotto || 'N/A') : 'N/A';
+    document.getElementById('sca-lotto').value = lottoFefo !== 'N/A' ? '⭐ ' + lottoFefo : 'N/A';
     _clearLottiScarico();
   }
 }
@@ -1256,14 +1264,26 @@ function _buildLottiScarico(lotti) {
       return '<option value="' + l.lotto + '">' + label + '</option>';
     }).join('');
   selLot.onchange = function() {
-    document.getElementById('sca-lotto').value = this.value;
-    // Autocompila collocazione dal lotto selezionato
-    var lot = lotti.find(function(l){ return l.lotto === this.value; }, this);
+    var v = this.value;
+    // Trova lotto selezionato
+    var lot = null;
+    for (var x = 0; x < lotti.length; x++) {
+      if (lotti[x].lotto === v) { lot = lotti[x]; break; }
+    }
+    // Aggiorna campo lotto con asterisco se è FEFO (primo)
+    var isFefo = lot && lotti.length > 0 && lotti[0].lotto === v;
+    document.getElementById('sca-lotto').value = v
+      ? (isFefo ? '⭐ ' : '') + v + (lot && lot.scadenza ? ' | scad: ' + lot.scadenza : '')
+      : '';
     if (lot && lot.colloc) document.getElementById('sca-colloc').value = lot.colloc;
   };
   field.appendChild(selLot);
-  // P5: NON preseleziona - utente sceglie esplicitamente
-  document.getElementById('sca-lotto').value = '';
+  // Mostra il lotto FEFO come anteprima nel campo testo (asterisco giallo)
+  // Il dropdown sotto permette di scegliere un lotto diverso
+  if (lotti.length > 0) {
+    document.getElementById('sca-lotto').value = '⭐ ' + (lotti[0].lotto || 'N/A')
+      + (lotti[0].scadenza ? ' | scad: ' + lotti[0].scadenza : '');
+  }
 }
 
 function _clearLottiScarico() {
@@ -1325,6 +1345,9 @@ function submitForm(tipo) {
     params.data         = document.getElementById('sca-data').value || oggi;
     params.tecnico      = document.getElementById('sca-tecnico').value;
     params.note         = document.getElementById('sca-note').value;
+    // Estrai solo codice lotto (rimuovi asterisco e scadenza)
+    var lottoRaw = document.getElementById('sca-lotto').value || '';
+    params.lotto = lottoRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
     if (!params.sede || !params.articolo) {
       toast('Compila i campi obbligatori (sede, articolo)', 'error'); return;
     }
@@ -1518,7 +1541,21 @@ function mostraDettagliScadenze() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────
-setSede('CB');
+// Imposta sede iniziale CB su tutti i hidden e label
+function _initSede(s) {
+  ['car','ape','sca'].forEach(function(p) {
+    var el = document.getElementById(p + '-sede');
+    if (el) el.value = s;
+    var lb = document.getElementById(p + '-sede-label');
+    if (lb) lb.textContent = s;
+  });
+}
+_initSede('CB');
+currentSede = 'CB';
+document.getElementById('btnCB').classList.add('active');
+document.getElementById('btnIS').classList.remove('active');
+document.getElementById('userBadge').textContent = 'CB';
+loadHomeStats();
 </script>
 </body>
 </html>
