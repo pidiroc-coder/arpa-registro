@@ -811,19 +811,68 @@ function _loadSelect(ids, params) {
 // ── SEDE ────────────────────────────────────────────────────
 function setSede(s) {
   if (s === currentSede) return;
-  var ov = document.getElementById('overlayWait');
+  var ov  = document.getElementById('overlayWait');
   var ovP = document.querySelector('#overlayWait p');
-  if (ov) ov.style.display='flex';
-  if (ovP) ovP.textContent='Cambio sede in corso...';
-  setTimeout(function() {
-    currentSede = s;
-    document.getElementById('btnCB').classList.toggle('active', s==='CB');
-    document.getElementById('btnIS').classList.toggle('active', s==='IS');
-    document.getElementById('userBadge').textContent = s;
-    loadHomeStats();
-    if (ov) ov.style.display='none';
-    if (ovP) ovP.textContent='Registrazione in corso...';
-  }, 800);
+  var ovS = document.querySelector('#overlayWait small');
+  if (ov)  ov.style.display = 'flex';
+  if (ovP) ovP.textContent  = 'Cambio sede ' + s + ' in corso...';
+  if (ovS) ovS.textContent  = 'Caricamento dati, attendere...';
+
+  // Aggiorna i bottoni subito
+  currentSede = s;
+  document.getElementById('btnCB').classList.toggle('active', s === 'CB');
+  document.getElementById('btnIS').classList.toggle('active', s === 'IS');
+  document.getElementById('userBadge').textContent = s;
+  document.getElementById('homeSubtitle').textContent = 'Sede ' + s + ' — caricamento...';
+  document.getElementById('countOrdini').textContent  = 'caricamento...';
+  document.getElementById('alertBar').classList.add('hidden');
+
+  // Conta le chiamate API da attendere (ordini + scadenze = 2)
+  var pending = 2;
+  function onDone() {
+    pending--;
+    if (pending <= 0) {
+      if (ov)  ov.style.display = 'none';
+      if (ovP) ovP.textContent  = 'Registrazione in corso...';
+      if (ovS) ovS.textContent  = 'Attendere, non chiudere la pagina';
+    }
+  }
+
+  // Chiama ordini
+  api({action:'ordini', sede:s}, function(d) {
+    if (d && d.ok) {
+      _dataOrdini = d.dati || [];
+      var aperti = _dataOrdini.filter(function(o){ return o.stato !== 'EVASO'; }).length;
+      document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
+    }
+    onDone();
+  });
+
+  // Chiama scadenze
+  api({action:'scadenze', sede:s, giorni:30}, function(d) {
+    var ab = document.getElementById('alertBar');
+    if (d && d.ok) {
+      _lastScadenze = d;
+      if (d.totaleAlert > 0) {
+        document.getElementById('alertText').innerHTML =
+          '<strong>' + d.totaleAlert + ' alert:</strong> ' +
+          d.inScadenza.length + ' in scadenza, ' +
+          d.sottoSoglia.length + ' sotto soglia';
+        ab.classList.remove('hidden');
+      } else {
+        ab.classList.add('hidden');
+      }
+    }
+    document.getElementById('homeSubtitle').textContent =
+      'Sede ' + s + ' — ' + new Date().toLocaleDateString('it-IT');
+    onDone();
+  });
+
+  // Sicurezza: nascondi overlay dopo 20s anche se le API non rispondono
+  clearTimeout(window._sedeTid);
+  window._sedeTid = setTimeout(function() {
+    if (ov) ov.style.display = 'none';
+  }, 20000);
 }
 
 // ── API CALL ─────────────────────────────────────────────────
@@ -841,35 +890,34 @@ function api(params, cb) {
 
 // ── HOME STATS ───────────────────────────────────────────────
 function loadHomeStats() {
-  document.getElementById('homeSubtitle').textContent = 'Sede ' + currentSede + ' — caricamento...';
-  document.getElementById('countOrdini').textContent = 'caricamento...';
-
   if (!BASE_URL) {
     document.getElementById('homeSubtitle').textContent = 'Sede ' + currentSede + ' — demo offline';
     document.getElementById('countOrdini').textContent = 'URL API da configurare';
     _mostraAlertDemo();
     return;
   }
-
+  // Refresh silenzioso (senza overlay) - usato dopo operazioni
   api({action:'ordini', sede:currentSede}, function(d) {
     if (d && d.ok) {
-      var aperti = (d.dati||[]).filter(function(o){ return o.stato !== 'EVASO'; }).length;
+      _dataOrdini = d.dati || [];
+      var aperti = _dataOrdini.filter(function(o){ return o.stato !== 'EVASO'; }).length;
       document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
     }
   });
   api({action:'scadenze', sede:currentSede, giorni:30}, function(d) {
-    if (d && d.ok && d.totaleAlert > 0) {
-      var ab = document.getElementById('alertBar');
+    var ab = document.getElementById('alertBar');
+    if (d && d.ok) {
       _lastScadenze = d;
-      document.getElementById('alertText').innerHTML =
-        '<strong>' + d.totaleAlert + ' alert:</strong> ' +
-        d.inScadenza.length + ' in scadenza, ' +
-        d.sottoSoglia.length + ' sotto soglia';
-      ab.classList.remove('hidden');
+      if (d.totaleAlert > 0) {
+        document.getElementById('alertText').innerHTML =
+          '<strong>' + d.totaleAlert + ' alert:</strong> ' +
+          d.inScadenza.length + ' in scadenza, ' +
+          d.sottoSoglia.length + ' sotto soglia';
+        ab.classList.remove('hidden');
+      }
     }
-    var dt = new Date();
     document.getElementById('homeSubtitle').textContent =
-      'Sede ' + currentSede + ' — ' + dt.toLocaleDateString('it-IT');
+      'Sede ' + currentSede + ' — ' + new Date().toLocaleDateString('it-IT');
   });
 }
 
