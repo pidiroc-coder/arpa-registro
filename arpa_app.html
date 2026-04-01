@@ -351,7 +351,7 @@
     <div class="form-section-title">Identificazione</div>
     <div class="field">
       <label>Sede <span class="req">*</span></label>
-      <select id="car-sede"><option value="CB">CB — Campobasso</option><option value="IS">IS — Isernia</option></select>
+      <select id="car-sede"><option value="">— seleziona sede —</option><option value="CB">CB — Campobasso</option><option value="IS">IS — Isernia</option></select>
     </div>
     <div class="field-row">
       <div class="field">
@@ -475,7 +475,7 @@
     <div class="field-row">
       <div class="field">
         <label>Sede <span class="req">*</span></label>
-        <select id="ape-sede"><option value="CB">CB</option><option value="IS">IS</option></select>
+        <select id="ape-sede"><option value="">— sede —</option><option value="CB">CB</option><option value="IS">IS</option></select>
       </div>
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
@@ -548,7 +548,7 @@
     <div class="field-row">
       <div class="field">
         <label>Sede <span class="req">*</span></label>
-        <select id="sca-sede"><option value="CB">CB</option><option value="IS">IS</option></select>
+        <select id="sca-sede"><option value="">— sede —</option><option value="CB">CB</option><option value="IS">IS</option></select>
       </div>
       <div class="field">
         <label>Laboratorio <span class="req">*</span></label>
@@ -1120,13 +1120,18 @@ function onOrdineSelezionato(ordineId) {
 function onArticoloAperturaSelezionato() {
   var sel = document.getElementById('ape-articolo');
   var opt = sel.options[sel.selectedIndex];
-  if (!opt) return;
-  var lotto  = opt.getAttribute('data-lotto')  || '';
-  var scad   = opt.getAttribute('data-scad')   || '';
-  var colloc = opt.getAttribute('data-colloc') || '';
-  document.getElementById('ape-lotto').value  = lotto  || '(FEFO auto)';
-  document.getElementById('ape-scad').value   = scad   || '';
-  if (colloc) document.getElementById('ape-colloc').value = colloc;
+  if (!opt || !opt.value) {
+    document.getElementById('ape-lotto').value = '';
+    document.getElementById('ape-scad').value  = '';
+    return;
+  }
+  // Lotto FEFO: primo lotto dalla lista dati memorizzati nell'opzione
+  var lotto = opt.getAttribute('data-lotto') || '';
+  var scad  = opt.getAttribute('data-scad')  || '';
+  document.getElementById('ape-lotto').value = lotto || '';
+  document.getElementById('ape-scad').value  = scad  || '';
+  // Collocazione: non autocompilata (P5 - utente deve selezionare)
+  document.getElementById('ape-colloc').value = '';
 }
 
 function onArticoloSelezionato() {
@@ -1146,7 +1151,7 @@ function loadArticoliSelect(selId) {
   var isSca = selId === 'sca-articolo';
   var apiParams = isApe
     ? {action:'lotti_apertura', sede:currentSede}
-    : {action:'giacenze', sede:currentSede, soloDisponibili:'1'};
+    : {action:'lotti_scarico', sede:currentSede};
 
   api(apiParams, function(d) {
     sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
@@ -1163,7 +1168,13 @@ function loadArticoliSelect(selId) {
         if (isApe) {
           opt.text = art + ' — da aprire: ' + giac;
         } else if (isSca) {
-          opt.text = art + ' — giacenza: ' + giac;
+          opt.text = art + ' — giac: ' + giac
+            + (g.tracciabilita ? ' | ' + g.tracciabilita : '');
+          // Memorizza lotti per selezione successiva
+          if (g.lotti && g.lotti.length > 0) {
+            opt.setAttribute('data-lotti', JSON.stringify(g.lotti));
+            opt.setAttribute('data-tracc', g.tracciabilita || 'NO');
+          }
         } else {
           opt.text = art + ' (giac: ' + giac + ')';
         }
@@ -1198,32 +1209,68 @@ function toggleLottoFields(tipo) {
 }
 
 function caricaLottiScarico() {
-  var art = document.getElementById('sca-articolo').value;
-  if (!art) { document.getElementById('sca-lotto').value = ''; return; }
-  // Cerca il lotto con apertura disponibile (non ancora scaricata)
-  // Usa giacenze per trovare il lotto con giacenza > 0
-  api({action:'giacenze', sede:currentSede}, function(d) {
-    if (!d || !d.ok) return;
-    var lotti = (d.dati||[]).filter(function(g) {
-      return g.articolo === art && g.giacenza > 0;
-    });
-    // Ordina FEFO
-    lotti.sort(function(a,b) {
-      var da = _parseData(a.scadenza), db = _parseData(b.scadenza);
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return da - db;
-    });
-    if (lotti.length > 0) {
-      document.getElementById('sca-lotto').value  = lotti[0].lotto    || 'N/A';
-      document.getElementById('sca-tracc').value  = lotti[0].lotto === 'N/A' ? 'NO' : 'SI';
-      if (lotti[0].colloc)
-        document.getElementById('sca-colloc').value = lotti[0].colloc;
-    } else {
-      document.getElementById('sca-lotto').value = 'N/A';
-    }
-  });
+  var sel = document.getElementById('sca-articolo');
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) {
+    document.getElementById('sca-lotto').value = '';
+    document.getElementById('sca-tracc').value = '';
+    _clearLottiScarico();
+    return;
+  }
+  var lottiStr = opt.getAttribute('data-lotti');
+  var tracc    = opt.getAttribute('data-tracc') || 'NO';
+  document.getElementById('sca-tracc').value = tracc;
+
+  if (!lottiStr) {
+    document.getElementById('sca-lotto').value = 'N/A';
+    return;
+  }
+  var lotti = [];
+  try { lotti = JSON.parse(lottiStr); } catch(e) {}
+
+  if (tracc === 'SI' || tracc === 'S') {
+    // Tracciabilità SI: dropdown lotti FEFO (scadenza più vicina prima)
+    _buildLottiScarico(lotti);
+  } else {
+    // Tracciabilità NO: autocompila con primo lotto FEFO
+    document.getElementById('sca-lotto').value = lotti.length ? (lotti[0].lotto || 'N/A') : 'N/A';
+    _clearLottiScarico();
+  }
+}
+
+function _buildLottiScarico(lotti) {
+  // Rimuovi eventuale select lotti precedente
+  _clearLottiScarico();
+  var field = document.getElementById('sca-lotto').parentNode;
+  var selLot = document.createElement('select');
+  selLot.id = 'sca-lotto-sel';
+  selLot.style.cssText = 'width:100%;border:1.5px solid #86efac;border-radius:10px;padding:10px 12px;font-size:14px;background:#f0fdf4;margin-top:8px;';
+  selLot.innerHTML = '<option value="">— seleziona lotto —</option>' +
+    lotti.map(function(l, i) {
+      var label = l.lotto || 'N/A';
+      if (l.scadenza) label += ' | scad: ' + l.scadenza;
+      label += ' | giac: ' + l.giacenza;
+      if (i === 0) label += ' ★ FEFO';
+      return '<option value="' + l.lotto + '">' + label + '</option>';
+    }).join('');
+  selLot.onchange = function() {
+    document.getElementById('sca-lotto').value = this.value;
+    // Autocompila collocazione dal lotto selezionato
+    var lot = lotti.find(function(l){ return l.lotto === this.value; }, this);
+    if (lot && lot.colloc) document.getElementById('sca-colloc').value = lot.colloc;
+  };
+  field.appendChild(selLot);
+  // Preseleziona primo lotto FEFO
+  if (lotti.length > 0) {
+    selLot.value = lotti[0].lotto || '';
+    document.getElementById('sca-lotto').value = lotti[0].lotto || 'N/A';
+    if (lotti[0].colloc) document.getElementById('sca-colloc').value = lotti[0].colloc;
+  }
+}
+
+function _clearLottiScarico() {
+  var old = document.getElementById('sca-lotto-sel');
+  if (old) old.parentNode.removeChild(old);
 }
 
 function simulaScan(targetId) {
@@ -1376,6 +1423,7 @@ function svuotaForm(tipo) {
     var lf = document.getElementById('car-lotto-fields');
     if (lf) lf.style.display = 'none';
   }
+  if (tipo === 'scarico') _clearLottiScarico();
 }
 
 // P4/P13: mostra modal dettaglio
