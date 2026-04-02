@@ -751,7 +751,7 @@ function showPage(id) {
 }
 
 function showForm(tipo) {
-  var oggi = new Date().toISOString().split('T')[0];
+  // oggiIso gestito in submitForm
   // Il caricamento dei dropdown viene fatto in showPage
 
   if (tipo === 'carico') {
@@ -1391,6 +1391,7 @@ async function submitForm(tipo) {
     if (!params.ordine)        mancanti.push('Ordine');
     if (!params.articolo)      mancanti.push('Articolo');
     if (!params.quantita || parseFloat(params.quantita) <= 0) mancanti.push('Quantità');
+    if (!params.data)          mancanti.push('Data carico');
     if (!params.tecnico)       mancanti.push('Tecnico');
     if (mancanti.length) {
       toast('Campi obbligatori mancanti: ' + mancanti.join(', '), 'error'); return;
