@@ -565,7 +565,6 @@
       <div class="field field-auto">
         <label>Tracciabilità</label>
         <input type="text" id="sca-tracc" readonly>
-        <input type="hidden" id="sca-ape-id">
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -776,43 +775,36 @@ function riapreDatelist(el) {
 }
 
 // Popola un <datalist> con i valori dall'API
-function _loadDatalist(listId, params, fallbackDati) {
+async function _loadDatalist(listId, params, fallbackDati) {
   var dl = document.getElementById(listId);
   if (!dl) return;
-  api(params, function(d) {
-    var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : (fallbackDati || []);
-    dl.innerHTML = dati.map(function(v) {
-      return '<option value="' + v + '">';
-    }).join('');
-  });
+  var d    = await apiCall(params);
+  var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : (fallbackDati || []);
+  dl.innerHTML = dati.map(function(v) { return '<option value="' + v + '">'; }).join('');
 }
 
 // Popola uno o più <select> con i valori dall'API
-function _loadSelect(ids, params, fallbackDati) {
+async function _loadSelect(ids, params, fallbackDati) {
   var idList = Array.isArray(ids) ? ids : [ids];
   idList.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.innerHTML = '<option value="">caricamento...</option>';
   });
-  api(params, function(d) {
-    var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : null;
-    // Se la risposta è vuota e abbiamo un fallback, usalo
-    if (!dati && fallbackDati && fallbackDati.length) dati = fallbackDati;
-    if (!dati) {
-      idList.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = '<option value="">— nessun valore —</option>';
-      });
-      return;
-    }
-    var opts = '<option value="">— seleziona —</option>' +
-      dati.map(function(v) {
-        return '<option value="' + v + '">' + v + '</option>';
-      }).join('');
+  var d    = await apiCall(params);
+  var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : null;
+  if (!dati && fallbackDati && fallbackDati.length) dati = fallbackDati;
+  if (!dati) {
     idList.forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.innerHTML = opts;
+      if (el) el.innerHTML = '<option value="">— nessun valore —</option>';
     });
+    return;
+  }
+  var opts = '<option value="">— seleziona —</option>' +
+    dati.map(function(v) { return '<option value="' + v + '">' + v + '</option>'; }).join('');
+  idList.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
   });
 }
 
@@ -834,7 +826,7 @@ var _COLLOC_FALLBACK = [
 ];
 
 // ── SEDE ────────────────────────────────────────────────────
-function setSede(s) {
+async function setSede(s) {
   if (s === currentSede) return;
   var ov  = document.getElementById('overlayWait');
   var ovP = document.querySelector('#overlayWait p');
@@ -862,95 +854,113 @@ function setSede(s) {
   document.getElementById('countOrdini').textContent  = 'caricamento...';
   document.getElementById('alertBar').classList.add('hidden');
 
-  // P3: pending = 2 (ordini + scadenze), nessun onDone spurio
-  var pending = 2;
-  function onDone() {
-    pending--;
-    if (pending <= 0) {
-      if (ov)  ov.style.display = 'none';
-      if (ovP) ovP.textContent  = 'Registrazione in corso...';
-      if (ovS) ovS.textContent  = 'Attendere, non chiudere la pagina';
-    }
-  }
-
-  api({action:'ordini', sede:s}, function(d) {
-    if (d && d.ok) {
-      _dataOrdini = d.dati || [];
-      var aperti = _dataOrdini.filter(function(o){ return o.stato !== 'EVASO'; }).length;
-      document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
-    }
-    onDone();
-  });
-
-  api({action:'scadenze', sede:s, giorni:30}, function(d) {
-    var ab = document.getElementById('alertBar');
-    if (d && d.ok) {
-      _lastScadenze = d;
-      if (d.totaleAlert > 0) {
-        document.getElementById('alertText').innerHTML =
-          '<strong>' + d.totaleAlert + ' alert:</strong> ' +
-          d.inScadenza.length + ' in scadenza, ' +
-          d.sottoSoglia.length + ' sotto soglia';
-        ab.classList.remove('hidden');
-      } else {
-        ab.classList.add('hidden');
-      }
-    }
-    document.getElementById('homeSubtitle').textContent =
-      'Sede ' + s + ' — ' + new Date().toLocaleDateString('it-IT');
-    onDone();
-  });
-
+  // Lancia entrambe le chiamate in parallelo con Promise.all
   clearTimeout(window._sedeTid);
   window._sedeTid = setTimeout(function() {
     if (ov) ov.style.display = 'none';
   }, 60000);
+
+  var results = await Promise.all([
+    apiCall({action: 'ordini',   sede: s}),
+    apiCall({action: 'scadenze', sede: s, giorni: 30})
+  ]);
+
+  var dOrd = results[0];
+  var dSca = results[1];
+
+  if (ov) ov.style.display = 'none';
+  if (ovP) ovP.textContent = 'Registrazione in corso...';
+  if (ovS) ovS.textContent = 'Attendere, non chiudere la pagina';
+
+  if (dOrd && dOrd.ok) {
+    _dataOrdini = dOrd.dati || [];
+    var aperti = _dataOrdini.filter(function(o) { return o.stato !== 'EVASO'; }).length;
+    document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
+  }
+
+  var ab = document.getElementById('alertBar');
+  if (dSca && dSca.ok) {
+    _lastScadenze = dSca;
+    if (dSca.totaleAlert > 0) {
+      document.getElementById('alertText').innerHTML =
+        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' +
+        dSca.inScadenza.length + ' in scadenza, ' +
+        dSca.sottoSoglia.length + ' sotto soglia';
+      ab.classList.remove('hidden');
+    } else {
+      ab.classList.add('hidden');
+    }
+  }
+  document.getElementById('homeSubtitle').textContent =
+    'Sede ' + s + ' — ' + new Date().toLocaleDateString('it-IT');
 }
 
 // ── API CALL ─────────────────────────────────────────────────
-function api(params, cb) {
-  if (!BASE_URL) { cb(null, {ok:false,errore:'URL API non configurato'}); return; }
+// ── API CALL (async/await) ────────────────────────────────────
+// Restituisce {ok, ...dati} oppure {ok:false, errore:'...'}.
+// Usa AbortController per timeout configurabile (default 120s).
+async function apiCall(params, timeoutMs) {
+  if (!BASE_URL) return {ok: false, errore: 'URL API non configurato'};
   var url = BASE_URL + '?token=' + TOKEN;
-  for (var k in params) url += '&' + k + '=' + encodeURIComponent(params[k]);
-  fetch(url)
-    .then(function(r){ return r.json(); })
-    .then(function(d){ cb(d, null); })
-    .catch(function(e){ cb(null, e); });
+  for (var k in params) {
+    if (params[k] !== undefined && params[k] !== null)
+      url += '&' + k + '=' + encodeURIComponent(params[k]);
+  }
+  var ms = timeoutMs || 120000;
+  var ctrl = new AbortController();
+  var tid  = setTimeout(function() { ctrl.abort(); }, ms);
+  try {
+    var res  = await fetch(url, {signal: ctrl.signal});
+    var data = await res.json();
+    return data;
+  } catch(e) {
+    if (e.name === 'AbortError')
+      return {ok: false, errore: 'Timeout (' + (ms/1000) + 's). Verifica nel foglio e riprova.'};
+    return {ok: false, errore: 'Errore di connessione. Verifica la rete e riprova.'};
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
-// apiPost rimosso - tutte le chiamate usano GET per evitare CORS
+// Retrocompatibilità: api(params, cb) → chiama apiCall e passa il risultato al callback
+// Usata internamente; le nuove funzioni usano apiCall direttamente.
+function api(params, cb) {
+  apiCall(params).then(function(d) { cb(d, null); }).catch(function(e) { cb(null, e); });
+}
 
 // ── HOME STATS ───────────────────────────────────────────────
-function loadHomeStats() {
+async function loadHomeStats() {
   if (!BASE_URL) {
     document.getElementById('homeSubtitle').textContent = 'Sede ' + currentSede + ' — demo offline';
     document.getElementById('countOrdini').textContent = 'URL API da configurare';
     _mostraAlertDemo();
     return;
   }
-  // Refresh silenzioso (senza overlay) - usato dopo operazioni
-  api({action:'ordini', sede:currentSede}, function(d) {
-    if (d && d.ok) {
-      _dataOrdini = d.dati || [];
-      var aperti = _dataOrdini.filter(function(o){ return o.stato !== 'EVASO'; }).length;
-      document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
+  // Refresh silenzioso in parallelo (senza overlay)
+  var results = await Promise.all([
+    apiCall({action: 'ordini',   sede: currentSede}),
+    apiCall({action: 'scadenze', sede: currentSede, giorni: 30})
+  ]);
+  var dOrd = results[0];
+  var dSca = results[1];
+  if (dOrd && dOrd.ok) {
+    _dataOrdini = dOrd.dati || [];
+    var aperti = _dataOrdini.filter(function(o) { return o.stato !== 'EVASO'; }).length;
+    document.getElementById('countOrdini').textContent = aperti + ' ordini aperti';
+  }
+  var ab = document.getElementById('alertBar');
+  if (dSca && dSca.ok) {
+    _lastScadenze = dSca;
+    if (dSca.totaleAlert > 0) {
+      document.getElementById('alertText').innerHTML =
+        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' +
+        dSca.inScadenza.length + ' in scadenza, ' +
+        dSca.sottoSoglia.length + ' sotto soglia';
+      ab.classList.remove('hidden');
     }
-  });
-  api({action:'scadenze', sede:currentSede, giorni:30}, function(d) {
-    var ab = document.getElementById('alertBar');
-    if (d && d.ok) {
-      _lastScadenze = d;
-      if (d.totaleAlert > 0) {
-        document.getElementById('alertText').innerHTML =
-          '<strong>' + d.totaleAlert + ' alert:</strong> ' +
-          d.inScadenza.length + ' in scadenza, ' +
-          d.sottoSoglia.length + ' sotto soglia';
-        ab.classList.remove('hidden');
-      }
-    }
-    document.getElementById('homeSubtitle').textContent =
-      'Sede ' + currentSede + ' — ' + new Date().toLocaleDateString('it-IT');
-  });
+  }
+  document.getElementById('homeSubtitle').textContent =
+    'Sede ' + currentSede + ' — ' + new Date().toLocaleDateString('it-IT');
 }
 
 function _mostraAlertDemo() {
@@ -961,13 +971,12 @@ function _mostraAlertDemo() {
 }
 
 // ── ORDINI ───────────────────────────────────────────────────
-function loadOrdini() {
+async function loadOrdini() {
   document.getElementById('ordiniList').innerHTML =
     '<div class="loading"><div class="spinner"></div><p>Caricamento ordini...</p></div>';
-  api({action:'ordini', sede:currentSede}, function(d) {
-    _dataOrdini = (d && d.ok) ? (d.dati||[]) : [];
-    renderOrdini();
-  });
+  var d = await apiCall({action: 'ordini', sede: currentSede});
+  _dataOrdini = (d && d.ok) ? (d.dati || []) : [];
+  renderOrdini();
 }
 
 function filterOrdini(el, stato) {
@@ -1008,13 +1017,12 @@ function renderOrdini() {
 }
 
 // ── REGISTRO ─────────────────────────────────────────────────
-function loadRegistro() {
+async function loadRegistro() {
   document.getElementById('registroList').innerHTML =
     '<div class="loading"><div class="spinner"></div><p>Caricamento...</p></div>';
-  api({action:'movimenti', sede:currentSede, limit:100}, function(d) {
-    _dataRegistro = (d && d.ok) ? (d.dati||[]) : [];
-    renderRegistro();
-  });
+  var d = await apiCall({action: 'movimenti', sede: currentSede, limit: 100});
+  _dataRegistro = (d && d.ok) ? (d.dati || []) : [];
+  renderRegistro();
 }
 
 function filterRegTipo(el, tipo) {
@@ -1050,13 +1058,12 @@ function renderRegistro() {
 }
 
 // ── GIACENZE ─────────────────────────────────────────────────
-function loadGiacenze() {
+async function loadGiacenze() {
   document.getElementById('giacenzeList').innerHTML =
     '<div class="loading"><div class="spinner"></div><p>Caricamento giacenze...</p></div>';
-  api({action:'giacenze', sede:currentSede}, function(d) {
-    _dataGiacenze = (d && d.ok) ? (d.dati||[]) : [];
-    renderGiacenze();
-  });
+  var d = await apiCall({action: 'giacenze', sede: currentSede});
+  _dataGiacenze = (d && d.ok) ? (d.dati || []) : [];
+  renderGiacenze();
 }
 
 function filterGiac(el, f) {
@@ -1105,28 +1112,26 @@ function renderGiacenze() {
 }
 
 // ── FORM HELPERS ─────────────────────────────────────────────
-function loadOrdiniSelect(selId) {
+async function loadOrdiniSelect(selId) {
   var sel = document.getElementById(selId);
   sel.innerHTML = '<option value="">caricamento...</option>';
-  api({action:'ordini', sede:currentSede}, function(d) {
-    sel.innerHTML = '<option value="">— seleziona ordine —</option>';
-    if (d && d.ok) {
-      (d.dati||[]).forEach(function(o) {
-        var opt = document.createElement('option');
-        opt.value = o.id;
-        opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
-        sel.appendChild(opt);
-      });
-    }
-  });
+  var d = await apiCall({action: 'ordini', sede: currentSede});
+  sel.innerHTML = '<option value="">— seleziona ordine —</option>';
+  if (d && d.ok) {
+    (d.dati || []).forEach(function(o) {
+      var opt = document.createElement('option');
+      opt.value = o.id;
+      opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
+      sel.appendChild(opt);
+    });
+  }
 }
 
 // Chiamata quando si seleziona un ordine nel form CARICO
 // Carica i prodotti di quell'ordine e svuota i campi dipendenti
-function onOrdineSelezionato(ordineId) {
+async function onOrdineSelezionato(ordineId) {
   var selArt = document.getElementById('car-articolo');
   selArt.innerHTML = '<option value="">caricamento prodotti...</option>';
-  // Svuota campi auto
   ['car-udm','car-conto','car-gruppo','car-fornit'].forEach(function(id) {
     document.getElementById(id).value = '';
   });
@@ -1134,25 +1139,23 @@ function onOrdineSelezionato(ordineId) {
     loadArticoliSelect('car-articolo');
     return;
   }
-  api({action:'prodotti_ordine', sede:currentSede, ordine:ordineId}, function(d) {
-    selArt.innerHTML = '<option value="">— seleziona prodotto —</option>';
-    if (d && d.ok && d.dati && d.dati.length) {
-      d.dati.forEach(function(p) {
-        var opt = document.createElement('option');
-        opt.value = p.articolo;
-        // P3: mostra quantità rimanente tra parentesi
-        var rim = p.rimanente ? ' (rim. ' + p.rimanente + ' ' + (p.udm||'') + ')' : '';
-        opt.text = p.articolo + rim;
-        opt.setAttribute('data-udm',    p.udm        || '');
-        opt.setAttribute('data-conto',  p.conto      || '');
-        opt.setAttribute('data-gruppo', p.gruppo     || '');
-        opt.setAttribute('data-fornit', p.fornitore  || '');
-        selArt.appendChild(opt);
-      });
-    } else {
-      selArt.innerHTML = '<option value="">Nessun prodotto per questo ordine</option>';
-    }
-  });
+  var d = await apiCall({action: 'prodotti_ordine', sede: currentSede, ordine: ordineId});
+  selArt.innerHTML = '<option value="">— seleziona prodotto —</option>';
+  if (d && d.ok && d.dati && d.dati.length) {
+    d.dati.forEach(function(p) {
+      var opt = document.createElement('option');
+      opt.value = p.articolo;
+      var rim = p.rimanente ? ' (rim. ' + p.rimanente + ' ' + (p.udm || '') + ')' : '';
+      opt.text = p.articolo + rim;
+      opt.setAttribute('data-udm',    p.udm       || '');
+      opt.setAttribute('data-conto',  p.conto     || '');
+      opt.setAttribute('data-gruppo', p.gruppo    || '');
+      opt.setAttribute('data-fornit', p.fornitore || '');
+      selArt.appendChild(opt);
+    });
+  } else {
+    selArt.innerHTML = '<option value="">Nessun prodotto per questo ordine</option>';
+  }
 }
 
 // Autocompila UDM, CONTO, GRUPPO, FORNITORE quando si seleziona l'articolo
@@ -1184,7 +1187,7 @@ function onArticoloSelezionato() {
   document.getElementById('car-fornit').value = opt.getAttribute('data-fornit') || '';
 }
 
-function loadArticoliSelect(selId) {
+async function loadArticoliSelect(selId) {
   var sel = document.getElementById(selId);
   sel.innerHTML = '<option value="">caricamento...</option>';
   var isApe = selId === 'ape-articolo';
@@ -1197,8 +1200,8 @@ function loadArticoliSelect(selId) {
   else if (isSca) apiParams = {action:'lotti_scarico',  sede:sedeNow};
   else            apiParams = {action:'giacenze', sede:sedeNow, soloDisponibili:'1'};
 
-  api(apiParams, function(d) {
-    sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
+  var d = await apiCall(apiParams);
+  sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
     if (d && d.ok) {
       var items = d.dati || [];
       var visti = {};
@@ -1239,8 +1242,8 @@ function loadArticoliSelect(selId) {
         sel.appendChild(opt);
       });
     }
-  });
 }
+
 
 function toggleLottoFields(tipo) {
   var val = document.getElementById('car-tracc').value;
@@ -1309,9 +1312,7 @@ function _buildLottiScarico(lotti) {
       ? (isFefo ? '⭐ ' : '') + v + (lot && lot.scadenza ? ' | scad: ' + lot.scadenza : '')
       : '';
     if (lot && lot.colloc) document.getElementById('sca-colloc').value = lot.colloc;
-    // Memorizza apeId nel campo nascosto per il submit
-    var apeIdField = document.getElementById('sca-ape-id');
-    if (apeIdField) apeIdField.value = (lot && lot.apeId) ? lot.apeId : '';
+
   };
   field.appendChild(selLot);
   // Mostra il lotto FEFO come anteprima nel campo testo (asterisco giallo)
@@ -1334,7 +1335,7 @@ function simulaScan(targetId) {
 // ── SUBMIT ────────────────────────────────────────────────────
 var _submitting = false; // guard contro doppio invio
 
-function submitForm(tipo) {
+async function submitForm(tipo) {
   if (_submitting) {
     toast('Operazione gi\u00e0 in corso, attendi...', 'info');
     return;
@@ -1377,13 +1378,9 @@ function submitForm(tipo) {
     params.dataApertura    = document.getElementById('ape-data').value || oggi;
     params.tecnicoApertura = document.getElementById('ape-tecnico').value;
     params.note            = document.getElementById('ape-note').value;
-    // P5: manda lotto e scadenza selezionati dal carico FEFO
+    // Manda lotto e scadenza selezionati (necessari per la riga nel registro)
     var lottoApeRaw = document.getElementById('ape-lotto').value || '';
-    params.lotto    = lottoApeRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
-    params.scadenza = document.getElementById('ape-scad').value || '';
-    // P5: manda lotto e scadenza selezionati (necessari per la riga nel registro)
-    var lottoApeRaw = document.getElementById('ape-lotto').value || '';
-    params.lotto    = lottoApeRaw.replace(/^⭐\s*/,'').split('|')[0].trim();
+    params.lotto    = lottoApeRaw.replace(/^\u2b50\s*/, '').split('|')[0].trim();
     params.scadenza = document.getElementById('ape-scad').value || '';
     if (!params.sede) params.sede = currentSede;
     var mancantiA = [];
@@ -1407,13 +1404,12 @@ function submitForm(tipo) {
     params.lotto = lottoRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
     // P7: manda tracciabilità per collegamento apertura/carico FEFO
     params.tracciabilita = document.getElementById('sca-tracc').value || '';
-    // Passa apeId per collegare direttamente all'apertura selezionata
-    var apeIdEl = document.getElementById('sca-ape-id');
-    if (apeIdEl && apeIdEl.value) params.apeId = apeIdEl.value;
+
     if (!params.sede) params.sede = currentSede;
     var mancantiS = [];
     if (!params.lab)      mancantiS.push('Laboratorio');
     if (!params.articolo) mancantiS.push('Articolo');
+    if (!params.data)     mancantiS.push('Data scarico');
     if (!params.tecnico)  mancantiS.push('Tecnico');
     if (mancantiS.length) {
       toast('Campi obbligatori mancanti: ' + mancantiS.join(', '), 'error'); return;
@@ -1441,32 +1437,26 @@ function submitForm(tipo) {
   mostraAttesa(true);
 
   // Usa GET invece di POST per evitare problemi CORS
-  api(params, function(d, err) {
-    // Nascondi clessidra
-    mostraAttesa(false);
-    _submitting = false;
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  var d = await apiCall(params);
 
-    if (err || !d) {
-      toast('Errore di connessione. Verifica la connessione e riprova.', 'error');
-      return;
-    }
-    if (!d.ok) {
-      toast('Errore: ' + (d.errore || 'sconosciuto'), 'error');
-      return;
-    }
+  mostraAttesa(false);
+  _submitting = false;
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 
-    svuotaForm(tipo);
-    showPage('page-home');
-    loadHomeStats();
+  if (!d || !d.ok) {
+    toast(d ? (d.errore || 'Errore sconosciuto') : 'Errore di connessione', 'error');
+    return;
+  }
 
-    // Mostra modal "Operazione conclusa con successo"
-    setTimeout(function() {
-      mostraModalSuccesso(tipo, d.riga);
-      // Toast con riga registrata (appare sotto il modal)
-      toast('\u2705 Riga ' + d.riga + ' registrata nel foglio', 'success');
-    }, 200);
-  });
+  // Successo: svuota il form e torna alla home
+  svuotaForm(tipo);
+  showPage('page-home');
+  loadHomeStats();
+
+  setTimeout(function() {
+    mostraModalSuccesso(tipo, d.riga);
+    toast('✅ Riga ' + d.riga + ' registrata nel foglio', 'success');
+  }, 200);
 }
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -1475,7 +1465,7 @@ function toast(msg, type) {
   t.textContent = msg;
   t.className = 'toast show ' + (type||'');
   clearTimeout(t._tid);
-  var dur = (type === 'success') ? 6000 : (type === 'error') ? 8000 : 4000;
+  var dur = (type === 'success') ? 6000 : (type === 'error') ? 12000 : 4000;
   t._tid = setTimeout(function(){ t.classList.remove('show'); }, dur);
 }
 
@@ -1486,21 +1476,7 @@ function mostraAttesa(show) {
   // Sicurezza: nascondi automaticamente dopo 30 secondi
   clearTimeout(window._overlayTid);
   if (show) {
-        window._overlayTid = setTimeout(function() {
-      // P1: non interrompere - aumenta timeout e riprova automaticamente
-      // Dopo 60s aggiorna il messaggio ma continua ad aspettare altri 60s
-      var ovP2 = document.querySelector('#overlayWait p');
-      if (ovP2) ovP2.textContent = 'Operazione in corso (tempo esteso)...';
-      // Secondo timeout: dopo altri 60s mostra errore
-      window._overlayTid2 = setTimeout(function() {
-        ov.style.display = 'none';
-        _submitting = false;
-        document.querySelectorAll('.submit-btn').forEach(function(b){
-          b.disabled=false; b.style.opacity='1';
-        });
-        toast('Operazione non completata. Verifica il foglio e riprova.', 'error');
-      }, 60000);
-    }, 60000);
+        // Timeout gestito da apiCall (AbortController 120s)
   }
 }
 
