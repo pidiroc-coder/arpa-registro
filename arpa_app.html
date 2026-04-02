@@ -491,7 +491,7 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>N. Lotto</label>
-        <input type="text" id="ape-lotto" placeholder="FEFO auto" readonly>
+        <input type="text" id="ape-lotto" onclick="this.select()" placeholder="FEFO auto" readonly>
         <span class="auto-tag">FEFO</span>
       </div>
       <div class="field field-auto">
@@ -1139,12 +1139,13 @@ function onOrdineSelezionato(ordineId) {
       d.dati.forEach(function(p) {
         var opt = document.createElement('option');
         opt.value = p.articolo;
-        opt.text  = p.articolo;
-        // Memorizza i dati per autocompilazione
-        opt.setAttribute('data-udm',    p.udm    || '');
-        opt.setAttribute('data-conto',  p.conto  || '');
-        opt.setAttribute('data-gruppo', p.gruppo || '');
-        opt.setAttribute('data-fornit', p.fornitore || '');
+        // P3: mostra quantità rimanente tra parentesi
+        var rim = p.rimanente ? ' (rim. ' + p.rimanente + ' ' + (p.udm||'') + ')' : '';
+        opt.text = p.articolo + rim;
+        opt.setAttribute('data-udm',    p.udm        || '');
+        opt.setAttribute('data-conto',  p.conto      || '');
+        opt.setAttribute('data-gruppo', p.gruppo     || '');
+        opt.setAttribute('data-fornit', p.fornitore  || '');
         selArt.appendChild(opt);
       });
     } else {
@@ -1374,6 +1375,10 @@ function submitForm(tipo) {
     params.dataApertura    = document.getElementById('ape-data').value || oggi;
     params.tecnicoApertura = document.getElementById('ape-tecnico').value;
     params.note            = document.getElementById('ape-note').value;
+    // P5: manda lotto e scadenza selezionati (necessari per la riga nel registro)
+    var lottoApeRaw = document.getElementById('ape-lotto').value || '';
+    params.lotto    = lottoApeRaw.replace(/^⭐\s*/,'').split('|')[0].trim();
+    params.scadenza = document.getElementById('ape-scad').value || '';
     if (!params.sede) params.sede = currentSede;
     var mancantiA = [];
     if (!params.lab)             mancantiA.push('Laboratorio');
@@ -1391,9 +1396,11 @@ function submitForm(tipo) {
     params.data         = document.getElementById('sca-data').value || oggi;
     params.tecnico      = document.getElementById('sca-tecnico').value;
     params.note         = document.getElementById('sca-note').value;
-    // Estrai solo codice lotto (rimuovi asterisco e scadenza)
+    // Estrai codice lotto pulito
     var lottoRaw = document.getElementById('sca-lotto').value || '';
     params.lotto = lottoRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
+    // P7: manda tracciabilità per collegamento apertura/carico FEFO
+    params.tracciabilita = document.getElementById('sca-tracc').value || '';
     if (!params.sede) params.sede = currentSede;
     var mancantiS = [];
     if (!params.lab)      mancantiS.push('Laboratorio');
@@ -1460,12 +1467,20 @@ function mostraAttesa(show) {
   // Sicurezza: nascondi automaticamente dopo 30 secondi
   clearTimeout(window._overlayTid);
   if (show) {
-    window._overlayTid = setTimeout(function() {
-      ov.style.display = 'none';
-      _submitting = false;
-      var btns = document.querySelectorAll('.submit-btn');
-      btns.forEach(function(b){ b.disabled=false; b.style.opacity='1'; });
-      toast('Tempo scaduto (60s). Verifica nel foglio se l\'operazione e\' stata registrata.', 'error');
+        window._overlayTid = setTimeout(function() {
+      // P1: non interrompere - aumenta timeout e riprova automaticamente
+      // Dopo 60s aggiorna il messaggio ma continua ad aspettare altri 60s
+      var ovP2 = document.querySelector('#overlayWait p');
+      if (ovP2) ovP2.textContent = 'Operazione in corso (tempo esteso)...';
+      // Secondo timeout: dopo altri 60s mostra errore
+      window._overlayTid2 = setTimeout(function() {
+        ov.style.display = 'none';
+        _submitting = false;
+        document.querySelectorAll('.submit-btn').forEach(function(b){
+          b.disabled=false; b.style.opacity='1';
+        });
+        toast('Operazione non completata. Verifica il foglio e riprova.', 'error');
+      }, 60000);
     }, 60000);
   }
 }
