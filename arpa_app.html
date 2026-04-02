@@ -698,7 +698,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/11';  // ← inserisci URL distribuzione GAS
+var BASE_URL = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/12';  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -720,15 +720,15 @@ function showPage(id) {
   if (id === 'page-giacenze')      loadGiacenze();
   // Ricarica dropdown solo per il form aperto (non tutti e 3 insieme)
   if (id === 'page-form-carico') {
-    _loadSelect('car-lab', {action:'laboratori', sede:currentSede});
+    _loadSelect('car-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
     _loadDatalist('list-tecnici', {action:'tecnici'});
     _loadDatalist('list-colloc',  {action:'collocazioni'});
   } else if (id === 'page-form-apertura') {
-    _loadSelect('ape-lab', {action:'laboratori', sede:currentSede});
+    _loadSelect('ape-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
     _loadDatalist('list-tecnici', {action:'tecnici'});
     _loadDatalist('list-colloc',  {action:'collocazioni'});
   } else if (id === 'page-form-scarico') {
-    _loadSelect('sca-lab', {action:'laboratori', sede:currentSede});
+    _loadSelect('sca-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
     _loadDatalist('list-tecnici', {action:'tecnici'});
     _loadDatalist('list-colloc',  {action:'collocazioni'});
   }
@@ -787,16 +787,17 @@ function _loadDatalist(listId, params) {
 }
 
 // Popola uno o più <select> con i valori dall'API
-function _loadSelect(ids, params) {
+function _loadSelect(ids, params, fallbackDati) {
   var idList = Array.isArray(ids) ? ids : [ids];
-  // Mostra "caricamento..." finché non arriva la risposta
   idList.forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.innerHTML = '<option value="">caricamento...</option>';
   });
   api(params, function(d) {
-    if (!d || !d.ok || !d.dati || !d.dati.length) {
-      // Errore o lista vuota: mostra messaggio
+    var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : null;
+    // Se la risposta è vuota e abbiamo un fallback, usalo
+    if (!dati && fallbackDati && fallbackDati.length) dati = fallbackDati;
+    if (!dati) {
       idList.forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = '<option value="">— nessun valore —</option>';
@@ -804,16 +805,23 @@ function _loadSelect(ids, params) {
       return;
     }
     var opts = '<option value="">— seleziona —</option>' +
-      d.dati.map(function(v) {
+      dati.map(function(v) {
         return '<option value="' + v + '">' + v + '</option>';
       }).join('');
-    // Anche i datalist: aggiorna il placeholder del campo correlato
     idList.forEach(function(id) {
       var el = document.getElementById(id);
       if (el) el.innerHTML = opts;
     });
   });
 }
+
+// Lista laboratori di fallback (dal foglio GRUPPI - aggiorna se cambia)
+var _LAB_FALLBACK = [
+  'LABORATORIO AGENTI FISICI',
+  'LABORATORIO CHIMICO',
+  'LABORATORIO MICROBIOLOGICO',
+  'LABORATORIO OSSERVATORIO'
+];
 
 // ── SEDE ────────────────────────────────────────────────────
 function setSede(s) {
