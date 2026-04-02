@@ -903,7 +903,7 @@ function setSede(s) {
   clearTimeout(window._sedeTid);
   window._sedeTid = setTimeout(function() {
     if (ov) ov.style.display = 'none';
-  }, 20000);
+  }, 60000);
 }
 
 // ── API CALL ─────────────────────────────────────────────────
@@ -1375,6 +1375,10 @@ function submitForm(tipo) {
     params.dataApertura    = document.getElementById('ape-data').value || oggi;
     params.tecnicoApertura = document.getElementById('ape-tecnico').value;
     params.note            = document.getElementById('ape-note').value;
+    // P5: manda lotto e scadenza selezionati dal carico FEFO
+    var lottoApeRaw = document.getElementById('ape-lotto').value || '';
+    params.lotto    = lottoApeRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
+    params.scadenza = document.getElementById('ape-scad').value || '';
     // P5: manda lotto e scadenza selezionati (necessari per la riga nel registro)
     var lottoApeRaw = document.getElementById('ape-lotto').value || '';
     params.lotto    = lottoApeRaw.replace(/^⭐\s*/,'').split('|')[0].trim();
