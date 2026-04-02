@@ -711,6 +711,22 @@ var _dataRegistro = [];
 var _dataGiacenze = [];
 
 // ── NAVIGAZIONE ──────────────────────────────────────────────
+// ── DATE UTILS ────────────────────────────────────────────────
+// input type="date" restituisce YYYY-MM-DD; il foglio usa dd/mm/yyyy
+function _isoToIta(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+function _itaToIso(ita) {
+  if (!ita) return '';
+  var p = ita.split('/');
+  if (p.length !== 3) return ita;
+  return p[2] + '-' + p[1] + '-' + p[0];
+}
+
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
@@ -742,7 +758,7 @@ function showForm(tipo) {
     document.getElementById('car-sede').value = currentSede;
     var lbl = document.getElementById('car-sede-label');
     if (lbl) lbl.textContent = currentSede;
-    document.getElementById('car-data').value = oggi;
+    document.getElementById('car-data').value = (typeof oggiIso !== 'undefined' ? oggiIso : new Date().toISOString().slice(0,10));
     svuotaForm('carico');
     loadOrdiniSelect('car-ordine');
     loadArticoliSelect('car-articolo');
@@ -751,7 +767,7 @@ function showForm(tipo) {
     document.getElementById('ape-sede').value = currentSede;
     var lblA = document.getElementById('ape-sede-label');
     if (lblA) lblA.textContent = currentSede;
-    document.getElementById('ape-data').value = oggi;
+    document.getElementById('ape-data').value = (typeof oggiIso !== 'undefined' ? oggiIso : new Date().toISOString().slice(0,10));
     var apeBadge = document.getElementById('ape-data-badge');
     if (apeBadge) apeBadge.textContent = new Date().toLocaleDateString('it-IT');
     svuotaForm('apertura');
@@ -761,7 +777,7 @@ function showForm(tipo) {
     document.getElementById('sca-sede').value = currentSede;
     var lblS = document.getElementById('sca-sede-label');
     if (lblS) lblS.textContent = currentSede;
-    document.getElementById('sca-data').value = oggi;
+    document.getElementById('sca-data').value = (typeof oggiIso !== 'undefined' ? oggiIso : new Date().toISOString().slice(0,10));
     svuotaForm('scarico');
     loadArticoliSelect('sca-articolo');
     showPage('page-form-scarico');
@@ -1246,12 +1262,19 @@ async function loadArticoliSelect(selId) {
 
 
 function toggleLottoFields(tipo) {
-  var val = document.getElementById('car-tracc').value;
-  var div = document.getElementById('car-lotto-fields');
+  var val    = document.getElementById('car-tracc').value;
+  var div    = document.getElementById('car-lotto-fields');
+  var inpSca = document.getElementById('car-scad');
+  var naSpan = document.getElementById('car-scad-na');
   div.style.display = val === 'SI' ? 'block' : 'none';
   if (val === 'NO') {
     document.getElementById('car-lotto').value = 'N/A';
-    document.getElementById('car-scad').value  = '';
+    if (inpSca) { inpSca.value = ''; inpSca.style.display = 'none'; }
+    if (naSpan) naSpan.style.display = 'inline';
+  } else {
+    document.getElementById('car-lotto').value = '';
+    if (inpSca) inpSca.style.display = '';
+    if (naSpan) naSpan.style.display = 'none';
   }
 }
 
@@ -1340,7 +1363,8 @@ async function submitForm(tipo) {
     toast('Operazione gi\u00e0 in corso, attendi...', 'info');
     return;
   }
-  var oggi = new Date().toLocaleDateString('it-IT').split('/').reverse().join('-');
+  var oggiIso = new Date().toISOString().slice(0,10); // YYYY-MM-DD per i campi date
+  var oggi    = _isoToIta(oggiIso); // dd/mm/yyyy per il foglio
   var params = {action: tipo};
 
   if (tipo === 'carico') {
@@ -1350,10 +1374,11 @@ async function submitForm(tipo) {
     params.articolo      = document.getElementById('car-articolo').value;
     params.tracciabilita = document.getElementById('car-tracc').value;
     params.lotto         = document.getElementById('car-lotto').value;
-    params.scadenza      = document.getElementById('car-scad').value;
+    var _traccVal = document.getElementById('car-tracc').value;
+    params.scadenza = (_traccVal === 'NO') ? 'N/A' : _isoToIta(document.getElementById('car-scad').value);
     params.collocazione  = document.getElementById('car-colloc').value;
     params.quantita      = document.getElementById('car-qta').value;
-    params.data          = document.getElementById('car-data').value || oggi;
+    params.data          = _isoToIta(document.getElementById('car-data').value) || oggi;
     params.tecnico       = document.getElementById('car-tecnico').value;
     params.note          = document.getElementById('car-note').value;
     params.udm           = document.getElementById('car-udm').value;
@@ -1375,7 +1400,7 @@ async function submitForm(tipo) {
     params.lab             = document.getElementById('ape-lab').value;
     params.articolo        = document.getElementById('ape-articolo').value;
     params.collocazione    = document.getElementById('ape-colloc').value;
-    params.dataApertura    = document.getElementById('ape-data').value || oggi;
+    params.dataApertura    = _isoToIta(document.getElementById('ape-data').value) || oggi;
     params.tecnicoApertura = document.getElementById('ape-tecnico').value;
     params.note            = document.getElementById('ape-note').value;
     // Manda lotto e scadenza selezionati (necessari per la riga nel registro)
@@ -1396,7 +1421,7 @@ async function submitForm(tipo) {
     params.lab          = document.getElementById('sca-lab').value;
     params.articolo     = document.getElementById('sca-articolo').value;
     params.collocazione = document.getElementById('sca-colloc').value;
-    params.data         = document.getElementById('sca-data').value || oggi;
+    params.data         = _isoToIta(document.getElementById('sca-data').value) || oggi;
     params.tecnico      = document.getElementById('sca-tecnico').value;
     params.note         = document.getElementById('sca-note').value;
     // Estrai codice lotto pulito
