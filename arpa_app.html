@@ -565,6 +565,7 @@
       <div class="field field-auto">
         <label>Tracciabilità</label>
         <input type="text" id="sca-tracc" readonly>
+        <input type="hidden" id="sca-ape-id">
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -1299,17 +1300,18 @@ function _buildLottiScarico(lotti) {
     }).join('');
   selLot.onchange = function() {
     var v = this.value;
-    // Trova lotto selezionato
     var lot = null;
     for (var x = 0; x < lotti.length; x++) {
       if (lotti[x].lotto === v) { lot = lotti[x]; break; }
     }
-    // Aggiorna campo lotto con asterisco se è FEFO (primo)
     var isFefo = lot && lotti.length > 0 && lotti[0].lotto === v;
     document.getElementById('sca-lotto').value = v
       ? (isFefo ? '⭐ ' : '') + v + (lot && lot.scadenza ? ' | scad: ' + lot.scadenza : '')
       : '';
     if (lot && lot.colloc) document.getElementById('sca-colloc').value = lot.colloc;
+    // Memorizza apeId nel campo nascosto per il submit
+    var apeIdField = document.getElementById('sca-ape-id');
+    if (apeIdField) apeIdField.value = (lot && lot.apeId) ? lot.apeId : '';
   };
   field.appendChild(selLot);
   // Mostra il lotto FEFO come anteprima nel campo testo (asterisco giallo)
@@ -1405,6 +1407,9 @@ function submitForm(tipo) {
     params.lotto = lottoRaw.replace(/^⭐\s*/, '').split('|')[0].trim();
     // P7: manda tracciabilità per collegamento apertura/carico FEFO
     params.tracciabilita = document.getElementById('sca-tracc').value || '';
+    // Passa apeId per collegare direttamente all'apertura selezionata
+    var apeIdEl = document.getElementById('sca-ape-id');
+    if (apeIdEl && apeIdEl.value) params.apeId = apeIdEl.value;
     if (!params.sede) params.sede = currentSede;
     var mancantiS = [];
     if (!params.lab)      mancantiS.push('Laboratorio');
@@ -1422,7 +1427,17 @@ function submitForm(tipo) {
   // Genera nonce univoco per questa operazione (anti-duplicato GAS redirect)
   params.nonce = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-  // Mostra clessidra
+  // Mostra clessidra con messaggio specifico per tipo
+  var ovP = document.querySelector('#overlayWait p');
+  var ovS = document.querySelector('#overlayWait small');
+  if (ovP) ovP.textContent = tipo === 'carico'
+    ? 'Registrazione CARICO in corso...'
+    : tipo === 'apertura'
+    ? 'Registrazione APERTURA in corso...'
+    : 'Registrazione SCARICO in corso...';
+  if (ovS) ovS.textContent = tipo === 'carico'
+    ? 'Il carico aggiorna giacenze e disponibilità. Attendere...'
+    : 'Attendere, non chiudere la pagina.';
   mostraAttesa(true);
 
   // Usa GET invece di POST per evitare problemi CORS
