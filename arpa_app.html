@@ -698,7 +698,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/12';  // ← inserisci URL distribuzione GAS
+var BASE_URL = 'https://script.google.com/macros/s/AKfycbyI9awYl5NVQwKN1g29GzEjw_Zoardm9nSEinmtAJ6rFHoxym8nYA_3JNjW2pU3tfjyUw/exec';  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -721,16 +721,16 @@ function showPage(id) {
   // Ricarica dropdown solo per il form aperto (non tutti e 3 insieme)
   if (id === 'page-form-carico') {
     _loadSelect('car-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
-    _loadDatalist('list-tecnici', {action:'tecnici'});
-    _loadDatalist('list-colloc',  {action:'collocazioni'});
+    _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
+    _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   } else if (id === 'page-form-apertura') {
     _loadSelect('ape-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
-    _loadDatalist('list-tecnici', {action:'tecnici'});
-    _loadDatalist('list-colloc',  {action:'collocazioni'});
+    _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
+    _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   } else if (id === 'page-form-scarico') {
     _loadSelect('sca-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
-    _loadDatalist('list-tecnici', {action:'tecnici'});
-    _loadDatalist('list-colloc',  {action:'collocazioni'});
+    _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
+    _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   }
 }
 
@@ -775,12 +775,12 @@ function riapreDatelist(el) {
 }
 
 // Popola un <datalist> con i valori dall'API
-function _loadDatalist(listId, params) {
+function _loadDatalist(listId, params, fallbackDati) {
   var dl = document.getElementById(listId);
   if (!dl) return;
   api(params, function(d) {
-    if (!d || !d.ok) return;
-    dl.innerHTML = (d.dati || []).map(function(v) {
+    var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : (fallbackDati || []);
+    dl.innerHTML = dati.map(function(v) {
       return '<option value="' + v + '">';
     }).join('');
   });
@@ -815,12 +815,21 @@ function _loadSelect(ids, params, fallbackDati) {
   });
 }
 
-// Lista laboratori di fallback (dal foglio GRUPPI - aggiorna se cambia)
+// Valori di fallback dal foglio GRUPPI (aggiorna se cambiano)
 var _LAB_FALLBACK = [
   'LABORATORIO AGENTI FISICI',
   'LABORATORIO CHIMICO',
   'LABORATORIO MICROBIOLOGICO',
   'LABORATORIO OSSERVATORIO'
+];
+var _TEC_FALLBACK = [
+  'BUCCI','CACCAMO','CAPATI','CAROSELLA','CELETTI','CICCONE','CIFELLI',
+  'DE SOCIO','DI IULIO','DI PARDO','DI ROCCO','GIACCIO','IACARUSO',
+  'LEPIDI','MELFI','MELLONI','MOLLICHELLI','RAMPA','ROBERTI'
+];
+var _COLLOC_FALLBACK = [
+  'FRIGO CHIMICO','FRIGO MICROBIOLOGICO','LAB. AGENTI FISICI',
+  'LAB. CHIMICO','LAB. MICROBIOLOGICO','LAB. OSSERVATORIO','MAGAZZINO'
 ];
 
 // ── SEDE ────────────────────────────────────────────────────
