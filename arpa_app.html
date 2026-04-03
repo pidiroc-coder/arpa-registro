@@ -876,6 +876,9 @@ async function setSede(s) {
     if (ov) ov.style.display = 'none';
   }, 60000);
 
+  // P2: torna sempre alla home quando si cambia sede
+  showPage('page-home');
+
   var results = await Promise.all([
     apiCall({action: 'ordini',   sede: s}),
     apiCall({action: 'scadenze', sede: s, giorni: 30})
