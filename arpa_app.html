@@ -698,7 +698,12 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
-var BASE_URL = 'https://script.google.com/macros/s/AKfycbyI9awYl5NVQwKN1g29GzEjw_Zoardm9nSEinmtAJ6rFHoxym8nYA_3JNjW2pU3tfjyUw/exec';  // ← inserisci URL distribuzione GAS
+// ── CONFIGURAZIONE URL API ────────────────────────────────────
+// Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
+// L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/20';
+var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
+               || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
 var currentSede    = 'CB';
@@ -919,7 +924,9 @@ async function setSede(s) {
 // Restituisce {ok, ...dati} oppure {ok:false, errore:'...'}.
 // Usa AbortController per timeout configurabile (default 120s).
 async function apiCall(params, timeoutMs) {
-  if (!BASE_URL) return {ok: false, errore: 'URL API non configurato'};
+  if (!BASE_URL || BASE_URL === 'INSERISCI_NUOVO_URL_GAS') {
+    return {ok: false, errore: 'URL API non configurato. Aggiorna BASE_URL_DEFAULT nell\'app.'};
+  }
   var url = BASE_URL + '?token=' + TOKEN;
   for (var k in params) {
     if (params[k] !== undefined && params[k] !== null)
@@ -930,11 +937,18 @@ async function apiCall(params, timeoutMs) {
   var tid  = setTimeout(function() { ctrl.abort(); }, ms);
   try {
     var res  = await fetch(url, {signal: ctrl.signal});
-    var data = await res.json();
-    return data;
+    var text = await res.text();
+    // Rileva risposta HTML (es. pagina login Google) invece di JSON
+    if (text.trim().startsWith('<')) {
+      return {ok: false, errore: 'API non raggiungibile: URL errato o accesso non configurato. ' +
+              'Verifica che il deployment GAS sia impostato su "Tutti" come accesso.'};
+    }
+    return JSON.parse(text);
   } catch(e) {
     if (e.name === 'AbortError')
       return {ok: false, errore: 'Timeout (' + (ms/1000) + 's). Verifica nel foglio e riprova.'};
+    if (e instanceof SyntaxError)
+      return {ok: false, errore: 'Risposta API non valida. Verifica l\'URL GAS.'};
     return {ok: false, errore: 'Errore di connessione. Verifica la rete e riprova.'};
   } finally {
     clearTimeout(tid);
@@ -1628,6 +1642,20 @@ function mostraDettagliScadenze() {
     '<div style="font-weight:700;font-size:15px;margin-bottom:12px;">Alert prodotti</div>'
     + (righe ? '<div style="font-weight:600;font-size:12px;color:#b45309;margin-bottom:6px;">In scadenza:</div><table style="width:100%;font-size:12px;">'+righe+'</table>' : '')
     + (sot ? '<div style="font-weight:600;font-size:12px;color:#dc2626;margin:10px 0 6px;">Sotto soglia:</div><table style="width:100%;font-size:12px;">'+sot+'</table>' : ''));
+}
+
+// ── AGGIORNA URL API (senza modificare il file) ──────────────
+// Chiamata da: console o da futura funzione admin
+function aggiornaUrlApi(nuovoUrl) {
+  if (!nuovoUrl || !nuovoUrl.startsWith('https://script.google.com')) {
+    toast('URL non valido. Deve iniziare con https://script.google.com', 'error');
+    return;
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('ARPA_API_URL', nuovoUrl);
+    BASE_URL = nuovoUrl;
+    toast('URL API aggiornato. Ricarica la pagina.', 'success');
+  }
 }
 
 // ── INIT ──────────────────────────────────────────────────────
