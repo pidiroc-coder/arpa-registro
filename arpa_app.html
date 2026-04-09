@@ -815,9 +815,10 @@ async function _loadSelect(ids, params, fallbackDati) {
   var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : null;
   if (!dati && fallbackDati && fallbackDati.length) dati = fallbackDati;
   if (!dati) {
+    var msgErr = (d && !d.ok && d.errore) ? '⚠ ' + d.errore.substring(0,40) : '— nessun valore —';
     idList.forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.innerHTML = '<option value="">— nessun valore —</option>';
+      if (el) el.innerHTML = '<option value="">' + msgErr + '</option>';
     });
     return;
   }
@@ -932,7 +933,7 @@ async function apiCall(params, timeoutMs) {
     if (params[k] !== undefined && params[k] !== null)
       url += '&' + k + '=' + encodeURIComponent(params[k]);
   }
-  var ms = timeoutMs || 120000;
+  var ms = timeoutMs || 30000; // default 30s; le operazioni passano 120000
   var ctrl = new AbortController();
   var tid  = setTimeout(function() { ctrl.abort(); }, ms);
   try {
@@ -1234,6 +1235,10 @@ async function loadArticoliSelect(selId) {
   else            apiParams = {action:'giacenze', sede:sedeNow, soloDisponibili:'1'};
 
   var d = await apiCall(apiParams);
+  if (d && !d.ok) {
+    sel.innerHTML = '<option value="">⚠ ' + (d.errore || 'Errore caricamento').substring(0,40) + '</option>';
+    return;
+  }
   sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
     if (d && d.ok) {
       var items = d.dati || [];
@@ -1484,7 +1489,7 @@ async function submitForm(tipo) {
   mostraAttesa(true);
 
   // Usa GET invece di POST per evitare problemi CORS
-  var d = await apiCall(params);
+  var d = await apiCall(params, 120000); // 120s per operazioni di scrittura
 
   mostraAttesa(false);
   _submitting = false;
@@ -1493,9 +1498,16 @@ async function submitForm(tipo) {
   if (!d || !d.ok) {
     var _msg = d ? (d.errore || 'Errore sconosciuto') : 'Errore di connessione';
     var _nkE = 'ARPA_NONCE_' + tipo + '_' + (params.articolo || '');
-    var _isNet = !d || _msg.indexOf('connessione') !== -1 || _msg.indexOf('Timeout') !== -1 || _msg.indexOf('raggiungibile') !== -1;
-    if (!_isNet) sessionStorage.removeItem(_nkE);
-    toast(_msg, 'error');
+    var _isNet = !d || _msg.indexOf('connessione') !== -1 ||
+                 _msg.indexOf('Timeout') !== -1 || _msg.indexOf('raggiungibile') !== -1;
+    if (!_isNet) {
+      sessionStorage.removeItem(_nkE);
+      toast(_msg, 'error');
+    } else {
+      // Errore di rete: il nonce rimane in sessionStorage per evitare duplicati al retry.
+      // Avvisa l'utente che potrebbe essere già stato registrato.
+      toast('⚠️ ' + _msg + ' — Controlla il registro prima di riprovare.', 'error');
+    }
     return;
   }
   // Successo: cancella nonce e torna alla home
