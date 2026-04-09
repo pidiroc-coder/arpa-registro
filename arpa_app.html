@@ -500,10 +500,7 @@
         <span class="auto-tag">auto</span>
       </div>
     </div>
-    <div class="field">
-      <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="ape-colloc" onclick="riapreDatelist(this)" list="list-colloc" autocomplete="off">
-    </div>
+    
   </div>
 
   <div class="form-section">
@@ -568,10 +565,7 @@
         <span class="auto-tag">auto</span>
       </div>
     </div>
-    <div class="field">
-      <label>Collocazione <span class="req">*</span></label>
-      <input type="text" id="sca-colloc" onclick="riapreDatelist(this)" list="list-colloc" autocomplete="off">
-    </div>
+    
   </div>
 
   <div class="form-section">
@@ -1208,7 +1202,6 @@ function onArticoloAperturaSelezionato() {
   document.getElementById('ape-lotto').value = lotto || '';
   document.getElementById('ape-scad').value  = scad  || '';
   // Collocazione: non autocompilata (P5 - utente deve selezionare)
-  document.getElementById('ape-colloc').value = '';
 }
 
 function onArticoloSelezionato() {
@@ -1422,7 +1415,6 @@ async function submitForm(tipo) {
     params.sede            = document.getElementById('ape-sede').value;
     params.lab             = document.getElementById('ape-lab').value;
     params.articolo        = document.getElementById('ape-articolo').value;
-    params.collocazione    = document.getElementById('ape-colloc').value;
     params.dataApertura    = _isoToIta(document.getElementById('ape-data').value) || oggi;
     params.tecnicoApertura = document.getElementById('ape-tecnico').value;
     params.note            = document.getElementById('ape-note').value;
@@ -1443,7 +1435,6 @@ async function submitForm(tipo) {
     params.sede         = document.getElementById('sca-sede').value;
     params.lab          = document.getElementById('sca-lab').value;
     params.articolo     = document.getElementById('sca-articolo').value;
-    params.collocazione = document.getElementById('sca-colloc').value;
     params.data         = _isoToIta(document.getElementById('sca-data').value) || oggi;
     params.tecnico      = document.getElementById('sca-tecnico').value;
     params.note         = document.getElementById('sca-note').value;
