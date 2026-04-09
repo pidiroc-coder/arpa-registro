@@ -701,7 +701,7 @@
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/library/d/1oSvbDPeU7L2hKO3s5YuiqcZp0eRvROPPzlwhKNYwesWN3gw3SBLNX6JM/20';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyI9awYl5NVQwKN1g29GzEjw_Zoardm9nSEinmtAJ6rFHoxym8nYA_3JNjW2pU3tfjyUw/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -1463,8 +1463,12 @@ async function submitForm(tipo) {
   var btn = document.querySelector('.submit-btn.submit-' + tipo);
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
-  // Genera nonce univoco per questa operazione (anti-duplicato GAS redirect)
-  params.nonce = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  // Nonce PERSISTENTE: riusa lo stesso se si riprova dopo errore di rete.
+  // Stesso nonce = GAS restituisce risultato cached = niente duplicati.
+  var _nk = 'ARPA_NONCE_' + tipo + '_' + (params.articolo || '');
+  var _nonceExist = sessionStorage.getItem(_nk);
+  params.nonce = _nonceExist || (Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+  if (!_nonceExist) sessionStorage.setItem(_nk, params.nonce);
 
   // Mostra clessidra con messaggio specifico per tipo
   var ovP = document.querySelector('#overlayWait p');
@@ -1487,11 +1491,15 @@ async function submitForm(tipo) {
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 
   if (!d || !d.ok) {
-    toast(d ? (d.errore || 'Errore sconosciuto') : 'Errore di connessione', 'error');
+    var _msg = d ? (d.errore || 'Errore sconosciuto') : 'Errore di connessione';
+    var _nkE = 'ARPA_NONCE_' + tipo + '_' + (params.articolo || '');
+    var _isNet = !d || _msg.indexOf('connessione') !== -1 || _msg.indexOf('Timeout') !== -1 || _msg.indexOf('raggiungibile') !== -1;
+    if (!_isNet) sessionStorage.removeItem(_nkE);
+    toast(_msg, 'error');
     return;
   }
-
-  // Successo: svuota il form e torna alla home
+  // Successo: cancella nonce e torna alla home
+  sessionStorage.removeItem('ARPA_NONCE_' + tipo + '_' + (params.articolo || ''));
   svuotaForm(tipo);
   showPage('page-home');
   loadHomeStats();
@@ -1649,12 +1657,48 @@ function mostraDettagliScadenze() {
 function aggiornaUrlApi(nuovoUrl) {
   if (!nuovoUrl || !nuovoUrl.startsWith('https://script.google.com')) {
     toast('URL non valido. Deve iniziare con https://script.google.com', 'error');
-    return;
+    return false;
   }
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('ARPA_API_URL', nuovoUrl);
     BASE_URL = nuovoUrl;
-    toast('URL API aggiornato. Ricarica la pagina.', 'success');
+  }
+  return true;
+}
+
+function mostraConfigUrl() {
+  var attuale = BASE_URL && BASE_URL !== 'INSERISCI_NUOVO_URL_GAS' ? BASE_URL : '';
+  var modal = document.getElementById('modalConfigUrl');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modalConfigUrl';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML =
+      '<div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">' +
+      '<h3 style="margin:0 0 8px;font-size:17px;">⚙️ Configura URL API</h3>' +
+      '<p style="font-size:13px;color:var(--txt2);margin:0 0 16px;">Incolla il nuovo URL della Web App Google Apps Script:</p>' +
+      '<textarea id="inputUrlApi" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--bord);font-size:12px;resize:none;font-family:monospace;background:var(--bg);color:var(--txt);box-sizing:border-box;" placeholder="https://script.google.com/macros/s/..."></textarea>' +
+      '<p style="font-size:11px;color:var(--txt2);margin:8px 0 16px;">In GAS: Distribuisci → Gestisci distribuzioni → copia URL</p>' +
+      '<div style="display:flex;gap:10px;">' +
+      '<button onclick="salvaUrlApi()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Salva e applica</button>' +
+      '<button onclick="document.getElementById(\'modalConfigUrl\').remove()" style="padding:12px 16px;background:var(--card);border:1px solid var(--bord);border-radius:8px;font-size:14px;cursor:pointer;">Annulla</button>' +
+      '</div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  }
+  modal.style.display = 'flex';
+  var ta = document.getElementById('inputUrlApi');
+  if (ta) ta.value = attuale;
+}
+
+function salvaUrlApi() {
+  var ta = document.getElementById('inputUrlApi');
+  if (!ta) return;
+  var url = ta.value.trim();
+  if (aggiornaUrlApi(url)) {
+    document.getElementById('modalConfigUrl').remove();
+    toast('URL salvato. Testa la connessione.', 'success');
+    loadHomeStats();
   }
 }
 
