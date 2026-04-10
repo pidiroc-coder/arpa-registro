@@ -1,14 +1,20 @@
 {
-  "name": "ARPA Molise — Registro",
+  "name": "ARPA Molise — Registro Magazzino",
   "short_name": "ARPA Registro",
-  "description": "Registro carico/scarico/apertura laboratorio ARPA Molise",
+  "description": "Registro Carico/Scarico/Apertura magazzino ARPA Molise",
   "start_url": "./arpa_app.html",
   "display": "standalone",
-  "background_color": "#1a2744",
-  "theme_color": "#1a2744",
   "orientation": "portrait",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1a2744",
+  "lang": "it",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231a2744'/><text x='96' y='130' font-size='100' text-anchor='middle' fill='white'>📦</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "utilities"]
 }
