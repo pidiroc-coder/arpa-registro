@@ -927,7 +927,10 @@ async function apiCall(params, timeoutMs) {
     if (params[k] !== undefined && params[k] !== null)
       url += '&' + k + '=' + encodeURIComponent(params[k]);
   }
-  var ms = timeoutMs || 30000; // default 30s; le operazioni passano 120000
+  // FIX timeout: il GAS ora restituisce la risposta PRIMA degli aggiornamenti pesanti
+  // (~5-8s) quindi 55s è più che sufficiente. Le chiamate di scrittura passano
+  // esplicitamente timeoutMs=55000; le letture usano 30s.
+  var ms = timeoutMs || 30000;
   var ctrl = new AbortController();
   var tid  = setTimeout(function() { ctrl.abort(); }, ms);
   try {
@@ -1475,13 +1478,11 @@ async function submitForm(tipo) {
     : tipo === 'apertura'
     ? 'Registrazione APERTURA in corso...'
     : 'Registrazione SCARICO in corso...';
-  if (ovS) ovS.textContent = tipo === 'carico'
-    ? 'Il carico aggiorna giacenze e disponibilità. Attendere...'
-    : 'Attendere, non chiudere la pagina.';
+  if (ovS) ovS.textContent = 'Attendere (~10s). Il foglio si aggiornerà automaticamente.';
   mostraAttesa(true);
 
   // Usa GET invece di POST per evitare problemi CORS
-  var d = await apiCall(params, 120000); // 120s per operazioni di scrittura
+  var d = await apiCall(params, 55000); // 55s: il GAS risponde prima degli aggiornamenti pesanti
 
   mostraAttesa(false);
   _submitting = false;
