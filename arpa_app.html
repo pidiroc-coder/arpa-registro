@@ -1147,7 +1147,7 @@ async function loadOrdiniSelect(selId) {
   sel.innerHTML = '<option value="">— seleziona ordine —</option>';
   if (d && d.ok) {
     (d.dati || []).forEach(function(o) {
-      if (o.stato === 'EVASO') return;
+      if (o.stato === 'EVASO') return; // v77: solo ordini da evadere
       var opt = document.createElement('option');
       opt.value = o.id;
       opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
