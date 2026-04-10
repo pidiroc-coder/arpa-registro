@@ -1504,6 +1504,10 @@ async function submitForm(tipo) {
   // Successo: cancella nonce e torna alla home
   sessionStorage.removeItem('ARPA_NONCE_' + tipo + '_' + (params.articolo || ''));
   svuotaForm(tipo);
+  ['car-articolo','ape-articolo','sca-articolo'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— seleziona prodotto —</option>';
+  });
   showPage('page-home');
   loadHomeStats();
 
