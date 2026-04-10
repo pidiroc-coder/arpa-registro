@@ -10,7 +10,6 @@
 <meta name="apple-mobile-web-app-title" content="ARPA Molise">
 <title>ARPA Molise — Registro</title>
 <link rel="manifest" href="manifest.json">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" defer></script>
 <style>
   :root {
     --blu:    #1a2744;
@@ -1148,7 +1147,6 @@ async function loadOrdiniSelect(selId) {
   sel.innerHTML = '<option value="">— seleziona ordine —</option>';
   if (d && d.ok) {
     (d.dati || []).forEach(function(o) {
-      // FIX v77: mostra solo ordini non completamente evasi
       if (o.stato === 'EVASO') return;
       var opt = document.createElement('option');
       opt.value = o.id;
@@ -1369,103 +1367,8 @@ function _clearLottiScarico() {
   if (old) old.parentNode.removeChild(old);
 }
 
-// v78: ricarica le liste prodotti per tutti i form
-function _refreshListeProdotti() {
-  // Carica in background senza bloccare — i dati saranno pronti
-  // quando l'utente apre il form successivo
-  loadArticoliSelect('car-articolo');
-  loadArticoliSelect('ape-articolo');
-  loadArticoliSelect('sca-articolo');
-  loadOrdiniSelect('car-ordine');
-}
-
-// ── BARCODE SCANNER (v78) ────────────────────────────────────
-var _scannerInstance = null;
-var _scanTargetId = null;
-
 function simulaScan(targetId) {
-  _scanTargetId = targetId;
-  var modal = document.getElementById('scannerModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'scannerModal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
-    modal.innerHTML =
-      '<div style="background:#fff;border-radius:16px;padding:16px;width:90%;max-width:400px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-      '<span style="font-weight:700;font-size:16px;">📷 Scansiona barcode</span>' +
-      '<button onclick="chiudiScanner()" style="border:none;background:none;font-size:22px;cursor:pointer;">✕</button>' +
-      '</div>' +
-      '<div id="scannerPreview" style="width:100%;border-radius:10px;overflow:hidden;"></div>' +
-      '<p style="text-align:center;font-size:12px;color:#64748b;margin-top:10px;">Inquadra il codice a barre del prodotto</p>' +
-      '<div id="scannerStatus" style="text-align:center;font-size:13px;color:var(--grn);margin-top:6px;min-height:20px;"></div>' +
-      '<button onclick="inserisciManuale()" style="margin-top:8px;width:100%;padding:10px;background:#f0f4f8;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;">Inserisci manualmente</button>' +
-      '</div>';
-    document.body.appendChild(modal);
-  }
-  modal.style.display = 'flex';
-  document.getElementById('scannerStatus').textContent = '';
-  avviaScanner();
-}
-
-function avviaScanner() {
-  if (typeof Html5Qrcode === 'undefined') {
-    document.getElementById('scannerStatus').textContent = '⚠ Libreria scanner non caricata';
-    return;
-  }
-  if (_scannerInstance) {
-    try { _scannerInstance.stop(); } catch(e) {}
-  }
-  _scannerInstance = new Html5Qrcode('scannerPreview');
-  _scannerInstance.start(
-    { facingMode: 'environment' },
-    { fps: 10, qrbox: { width: 280, height: 120 }, aspectRatio: 1.5 },
-    function onScan(decoded) {
-      var codice = decoded.trim();
-      document.getElementById('scannerStatus').textContent = '✅ Trovato: ' + codice;
-      // Cerca nel select target il codice scansionato
-      var sel = document.getElementById(_scanTargetId);
-      if (sel) {
-        var trovato = false;
-        for (var i = 0; i < sel.options.length; i++) {
-          var optVal = sel.options[i].value.toUpperCase();
-          if (optVal === codice.toUpperCase() || optVal.indexOf(codice.toUpperCase()) !== -1) {
-            sel.selectedIndex = i;
-            sel.dispatchEvent(new Event('change'));
-            trovato = true;
-            break;
-          }
-        }
-        if (!trovato) {
-          document.getElementById('scannerStatus').innerHTML =
-            '⚠ Codice <strong>' + codice + '</strong> non trovato nella lista prodotti';
-          return; // non chiudere, lascia riprovare
-        }
-      }
-      setTimeout(chiudiScanner, 600);
-    },
-    function onError() { /* errori continui di lettura, ignora */ }
-  ).catch(function(err) {
-    document.getElementById('scannerStatus').textContent =
-      '⚠ Camera non disponibile: ' + (err.message || err).toString().substring(0, 60);
-  });
-}
-
-function chiudiScanner() {
-  if (_scannerInstance) {
-    try { _scannerInstance.stop(); } catch(e) {}
-    _scannerInstance = null;
-  }
-  var modal = document.getElementById('scannerModal');
-  if (modal) modal.style.display = 'none';
-  var preview = document.getElementById('scannerPreview');
-  if (preview) preview.innerHTML = '';
-}
-
-function inserisciManuale() {
-  chiudiScanner();
-  var sel = document.getElementById(_scanTargetId);
-  if (sel) sel.focus();
+  toast('Scanner non ancora attivo: i codici non sono ancora associati ai prodotti.', 'info');
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
@@ -1602,8 +1505,10 @@ async function submitForm(tipo) {
   // Successo: cancella nonce e torna alla home
   sessionStorage.removeItem('ARPA_NONCE_' + tipo + '_' + (params.articolo || ''));
   svuotaForm(tipo);
-  // v78: ricarica le liste prodotti per tutti i form (giacenze aggiornate)
-  _refreshListeProdotti();
+  ['car-articolo','ape-articolo','sca-articolo'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— seleziona prodotto —</option>';
+  });
   showPage('page-home');
   loadHomeStats();
 
@@ -1742,4 +1647,85 @@ function mostraDettagliScadenze() {
   if (!_lastScadenze) return;
   var righe = (_lastScadenze.inScadenza||[]).map(function(s) {
     return _rigaDett(s.articolo,
-      '<span style="color:' + (s.scaduto?'#dc2626':'#d97706') + ';font-weight:600;
+      '<span style="color:' + (s.scaduto?'#dc2626':'#d97706') + ';font-weight:600;">'
+      + s.scadenza + (s.scaduto?' (SCADUTO)':' ('+s.giorniMancanti+'gg)') + '</span>');
+  }).join('');
+  var sot = (_lastScadenze.sottoSoglia||[]).map(function(s) {
+    return _rigaDett(s.articolo,
+      '<span style="color:#dc2626;">giac: '+s.giacenza+' / soglia: '+s.soglia+'</span>');
+  }).join('');
+  mostraDettaglio(
+    '<div style="font-weight:700;font-size:15px;margin-bottom:12px;">Alert prodotti</div>'
+    + (righe ? '<div style="font-weight:600;font-size:12px;color:#b45309;margin-bottom:6px;">In scadenza:</div><table style="width:100%;font-size:12px;">'+righe+'</table>' : '')
+    + (sot ? '<div style="font-weight:600;font-size:12px;color:#dc2626;margin:10px 0 6px;">Sotto soglia:</div><table style="width:100%;font-size:12px;">'+sot+'</table>' : ''));
+}
+
+// ── AGGIORNA URL API (senza modificare il file) ──────────────
+// Chiamata da: console o da futura funzione admin
+function aggiornaUrlApi(nuovoUrl) {
+  if (!nuovoUrl || !nuovoUrl.startsWith('https://script.google.com')) {
+    toast('URL non valido. Deve iniziare con https://script.google.com', 'error');
+    return false;
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('ARPA_API_URL', nuovoUrl);
+    BASE_URL = nuovoUrl;
+  }
+  return true;
+}
+
+function mostraConfigUrl() {
+  var attuale = BASE_URL && BASE_URL !== 'INSERISCI_NUOVO_URL_GAS' ? BASE_URL : '';
+  var modal = document.getElementById('modalConfigUrl');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modalConfigUrl';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML =
+      '<div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">' +
+      '<h3 style="margin:0 0 8px;font-size:17px;">⚙️ Configura URL API</h3>' +
+      '<p style="font-size:13px;color:var(--txt2);margin:0 0 16px;">Incolla il nuovo URL della Web App Google Apps Script:</p>' +
+      '<textarea id="inputUrlApi" style="width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid var(--bord);font-size:12px;resize:none;font-family:monospace;background:var(--bg);color:var(--txt);box-sizing:border-box;" placeholder="https://script.google.com/macros/s/..."></textarea>' +
+      '<p style="font-size:11px;color:var(--txt2);margin:8px 0 16px;">In GAS: Distribuisci → Gestisci distribuzioni → copia URL</p>' +
+      '<div style="display:flex;gap:10px;">' +
+      '<button onclick="salvaUrlApi()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Salva e applica</button>' +
+      '<button onclick="document.getElementById(\'modalConfigUrl\').remove()" style="padding:12px 16px;background:var(--card);border:1px solid var(--bord);border-radius:8px;font-size:14px;cursor:pointer;">Annulla</button>' +
+      '</div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  }
+  modal.style.display = 'flex';
+  var ta = document.getElementById('inputUrlApi');
+  if (ta) ta.value = attuale;
+}
+
+function salvaUrlApi() {
+  var ta = document.getElementById('inputUrlApi');
+  if (!ta) return;
+  var url = ta.value.trim();
+  if (aggiornaUrlApi(url)) {
+    document.getElementById('modalConfigUrl').remove();
+    toast('URL salvato. Testa la connessione.', 'success');
+    loadHomeStats();
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+// Imposta sede iniziale CB su tutti i hidden e label
+function _initSede(s) {
+  ['car','ape','sca'].forEach(function(p) {
+    var el = document.getElementById(p + '-sede');
+    if (el) el.value = s;
+    var lb = document.getElementById(p + '-sede-label');
+    if (lb) lb.textContent = s;
+  });
+}
+_initSede('CB');
+currentSede = 'CB';
+document.getElementById('btnCB').classList.add('active');
+document.getElementById('btnIS').classList.remove('active');
+document.getElementById('userBadge').textContent = 'CB';
+loadHomeStats();
+</script>
+</body>
+</html>
