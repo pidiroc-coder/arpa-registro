@@ -1409,6 +1409,15 @@ async function submitForm(tipo) {
     if (!params.quantita || parseFloat(params.quantita) <= 0) mancanti.push('Quantità');
     if (!params.data)          mancanti.push('Data carico');
     if (!params.tecnico)       mancanti.push('Tecnico');
+    // Validazione scadenza: se tracciato SI, la scadenza non può essere nel passato
+    var _traccValCar = document.getElementById('car-tracc').value;
+    if (_traccValCar === 'SI' && params.scadenza && params.scadenza !== 'N/A') {
+      var _partiScad = params.scadenza.split('/');
+      if (_partiScad.length === 3) {
+        var _dtScad = new Date(_partiScad[2], _partiScad[1] - 1, _partiScad[0]);
+        if (_dtScad < new Date()) mancanti.push('Scadenza già passata — verificare il lotto');
+      }
+    }
     if (mancanti.length) {
       toast('Campi obbligatori mancanti: ' + mancanti.join(', '), 'error'); return;
     }
