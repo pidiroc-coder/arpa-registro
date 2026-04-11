@@ -1422,7 +1422,8 @@ async function submitForm(tipo) {
     // Manda lotto e scadenza selezionati (necessari per la riga nel registro)
     var lottoApeRaw = document.getElementById('ape-lotto').value || '';
     params.lotto    = lottoApeRaw.replace(/^\u2b50\s*/, '').split('|')[0].trim();
-    params.scadenza = document.getElementById('ape-scad').value || '';
+    params.scadenza      = document.getElementById('ape-scad').value || '';
+    params.tracciabilita = 'SI'; // Apertura sempre per prodotti tracciati
     if (!params.sede) params.sede = currentSede;
     var mancantiA = [];
     if (!params.lab)             mancantiA.push('Laboratorio');
