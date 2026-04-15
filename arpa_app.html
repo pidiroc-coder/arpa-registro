@@ -1035,6 +1035,11 @@ async function noInvia() {
   }
   if (!righe.length) { toast('Aggiungi almeno un prodotto', 'warning'); return; }
 
+  // Anti doppio-invio
+  var btnNo = document.querySelector('#page-nuovo-ordine .submit-btn');
+  if (btnNo && btnNo.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
+  if (btnNo) { btnNo.disabled = true; btnNo.style.opacity = '0.6'; }
+
   // Mostra progresso
   var prog    = document.getElementById('no-progress');
   var progBar = document.getElementById('no-progress-bar');
@@ -1057,6 +1062,8 @@ async function noInvia() {
   progBar.style.width = '50%';
   var d = await apiCall(params, 60000);
   progBar.style.width = '100%';
+
+  if (btnNo) { btnNo.disabled = false; btnNo.style.opacity = '1'; }
 
   if (!d || !d.ok) {
     prog.style.display = 'none';
@@ -1288,6 +1295,11 @@ async function cmInvia() {
   }
   if (!righe.length) { toast('Nessuna riga inclusa', 'warning'); return; }
 
+  // Anti doppio-invio
+  var btnCm = document.querySelector('#page-carico-multiplo .submit-btn');
+  if (btnCm && btnCm.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
+  if (btnCm) { btnCm.disabled = true; btnCm.style.opacity = '0.6'; }
+
   // Progresso
   var prog    = document.getElementById('cm-progress');
   var progBar = document.getElementById('cm-progress-bar');
@@ -1312,6 +1324,7 @@ async function cmInvia() {
   var d = await apiCall(params, 120000);
   progBar.style.width = '100%';
   prog.style.display  = 'none';
+  if (btnCm) { btnCm.disabled = false; btnCm.style.opacity = '1'; }
 
   if (!d || !d.ok) {
     toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
@@ -1522,6 +1535,7 @@ async function setSede(s) {
   _clearLottiScarico();
 
   currentSede = s;
+  _dataOrdini = []; // svuota cache ordini — la nuova sede la ricarica subito
   document.getElementById('btnCB').classList.toggle('active', s === 'CB');
   document.getElementById('btnIS').classList.toggle('active', s === 'IS');
   document.getElementById('userBadge').textContent = s;
@@ -2325,18 +2339,12 @@ function mostraDettaglioOrdine(o) {
 function _apriCaricoConOrdine(id) {
   document.getElementById('modalDettaglio').style.display = 'none';
   showForm('carico');
-  // loadOrdiniSelect è async — attende che le option siano pronte poi pre-seleziona
-  (async function() {
+  // loadOrdiniSelect è già chiamata da showForm, ma non è awaited.
+  // Richiamiamo direttamente per pre-selezionare l'ordine al completamento.
+  loadOrdiniSelect('car-ordine').then(function() {
     var sel = document.getElementById('car-ordine');
-    for (var t = 0; t < 30; t++) {
-      await new Promise(function(r) { setTimeout(r, 100); });
-      if (sel.querySelector('option[value="' + id + '"]')) {
-        sel.value = id;
-        onOrdineSelezionato(id);
-        return;
-      }
-    }
-  })();
+    if (sel) { sel.value = id; onOrdineSelezionato(id); }
+  });
 }
 
 function mostraDettaglioMovimento(m) {
