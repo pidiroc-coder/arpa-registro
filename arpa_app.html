@@ -29,6 +29,8 @@
     --bord:   #e2e8f0;
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
     --rad:    16px;
+    --primary:      #3b82f6;
+    --primary-soft: #eff6ff;
     --radSm:  10px;
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -187,6 +189,9 @@
   /* ── BOTTOM NAV placeholder (padding) ── */
   .page-content { padding-bottom:20px; }
 
+  /* ── CARD generica (Nuovo Ordine / Carico Multiplo) ── */
+  .card { background:var(--card); border:1px solid var(--bord); border-radius:var(--rad); padding:16px; box-shadow:var(--shadow); }
+
   /* ── OVERLAY CLESSIDRA ── */
   .overlay-wait {
     position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
@@ -219,6 +224,19 @@
   .modal-sub { font-size:14px; color:#64748b; margin-bottom:20px; line-height:1.5; }
   .modal-btn { width:100%; padding:13px; border:none; border-radius:12px;
     background:#16a34a; color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+
+  /* Nuovo Ordine / Carico Multiplo */
+  .btn-add-row {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cm-riga .field label, .no-riga .field label { font-size: 12px; margin-bottom: 3px; }
 </style>
 </head>
 <body>
@@ -267,6 +285,12 @@
   </div>
 
   <div class="op-grid">
+    <div class="op-btn" onclick="showPage('page-nuovo-ordine')">
+      <div class="op-icon blu">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div class="op-label">Nuovo Ordine</div>
+    </div>
     <div class="op-btn" onclick="showPage('page-ordini')">
       <div class="op-icon blu">
         <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -687,10 +711,596 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: NUOVO ORDINE MULTIPLO            -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-nuovo-ordine">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Nuovo Ordine</h2>
+    <span class="form-badge badge-ordine">ORDINE</span>
+  </div>
+
+  <!-- Testata ordine -->
+  <div class="card" style="margin-bottom:12px;">
+    <div class="field">
+      <label>N. Ordine <span class="req">*</span></label>
+      <input type="number" id="no-nordine" placeholder="es. 74" min="1" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Anno <span class="req">*</span></label>
+      <input type="number" id="no-anno" placeholder="es. 2025" min="2020" max="2099" value="" autocomplete="off">
+    </div>
+    <div class="field" id="no-id-preview-wrap" style="display:none;">
+      <label>ID Ordine generato</label>
+      <div id="no-id-preview" style="font-weight:700;color:var(--primary);padding:8px 0;font-size:15px;"></div>
+    </div>
+    <div class="field">
+      <label>Fornitore <span class="req">*</span></label>
+      <input type="text" id="no-fornitore" list="list-fornitori" placeholder="Cerca fornitore..." autocomplete="off">
+      <datalist id="list-fornitori"></datalist>
+    </div>
+    <div class="field">
+      <label>Data Ordine</label>
+      <input type="date" id="no-data-ord">
+    </div>
+    <div class="field">
+      <label>Laboratorio</label>
+      <input type="text" id="no-lab" list="list-lab-no" autocomplete="off">
+      <datalist id="list-lab-no"></datalist>
+    </div>
+  </div>
+
+  <!-- Lista prodotti temporanea -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <h3 style="margin:0;font-size:15px;">Prodotti</h3>
+    <button class="btn-add-row" onclick="noAggiungiRiga()">+ Aggiungi</button>
+  </div>
+  <div id="no-righe-wrap"></div>
+
+  <!-- Barra progresso -->
+  <div id="no-progress" style="display:none;margin:12px 0;">
+    <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
+      <div id="no-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
+    </div>
+    <div id="no-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
+  </div>
+
+  <button class="submit-btn submit-ordine" onclick="noInvia()" style="margin-top:16px;">
+    Invia Ordine
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- PAGE: CARICO MULTIPLO DA ORDINE        -->
+<!-- ════════════════════════════════════════ -->
+<div class="page page-content" id="page-carico-multiplo">
+  <div class="form-header">
+    <div class="back-btn" onclick="showPage('page-ordini')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Carico Multiplo</h2>
+    <span class="form-badge badge-carico">CARICO</span>
+  </div>
+  <div id="cm-ordine-info" class="card" style="margin-bottom:12px;font-size:14px;"></div>
+
+  <!-- Dati comuni del carico -->
+  <div class="card" style="margin-bottom:12px;">
+    <div class="field">
+      <label>Laboratorio <span class="req">*</span></label>
+      <input type="text" id="cm-lab" list="list-lab-cm" autocomplete="off">
+      <datalist id="list-lab-cm"></datalist>
+    </div>
+    <div class="field">
+      <label>Tecnico <span class="req">*</span></label>
+      <input type="text" id="cm-tecnico" list="list-tecnici" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Data Carico</label>
+      <input type="date" id="cm-data">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+      <input type="text" id="cm-colloc-all" list="list-colloc"
+             placeholder="Collocazione comune..." autocomplete="off"
+             style="flex:1;">
+      <button onclick="cmApplicaCollocazione()" style="white-space:nowrap;padding:8px 12px;background:var(--primary-soft);color:var(--primary);border:none;border-radius:8px;font-size:13px;cursor:pointer;">
+        Applica a tutti
+      </button>
+    </div>
+  </div>
+
+  <!-- Schede prodotti dell'ordine -->
+  <div id="cm-righe-wrap"></div>
+
+  <!-- Barra progresso -->
+  <div id="cm-progress" style="display:none;margin:12px 0;">
+    <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
+      <div id="cm-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
+    </div>
+    <div id="cm-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
+  </div>
+
+  <button class="submit-btn submit-carico" onclick="cmInvia()" style="margin-top:16px;">
+    Registra Carichi
+  </button>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
+// ── CACHE ANAGRAFICA IN-MEMORY ────────────────────────────
+// Carica UNA SOLA VOLTA per sede e mantiene in memoria.
+// Non usa localStorage (dati cambiano spesso).
+// L'autocomplete filtra localmente dopo il caricamento.
+async function _loadAnagrafica(sede) {
+  if (!sede) return;
+  var ora = Date.now();
+  // Ricarica solo se cache vuota o più vecchia di 10 minuti
+  if (_cacheAna[sede] && (ora - (_cacheAnaTs[sede]||0)) < 600000) return;
+  try {
+    var d = await apiCall({action:'anagrafica', sede:sede});
+    if (d && d.ok && d.dati) {
+      _cacheAna[sede]   = d.dati;
+      _cacheAnaTs[sede] = Date.now();
+    }
+  } catch(e) { console.warn('_loadAnagrafica:', e); }
+}
+
+// Restituisce array di codici filtrati per testo (min 1 char)
+function _filtraAna(sede, testo) {
+  var lista = _cacheAna[sede] || [];
+  if (!testo) return lista.map(function(x){ return x.codice; });
+  var t = testo.trim().toUpperCase();
+  return lista
+    .filter(function(x){ return x.codice.toUpperCase().indexOf(t) !== -1; })
+    .map(function(x){ return x.codice; });
+}
+
+// Dati di un articolo dalla cache
+function _getAnaItem(sede, codice) {
+  var lista = _cacheAna[sede] || [];
+  var uc = (codice||'').trim().toUpperCase();
+  for (var i=0; i<lista.length; i++)
+    if (lista[i].codice.toUpperCase() === uc) return lista[i];
+  return null;
+}
+
+// Aggiorna datalist con i codici filtrati
+function _aggiornaSuggerimenti(inputEl, sede) {
+  var dlId = inputEl.getAttribute('list');
+  if (!dlId) return;
+  var dl = document.getElementById(dlId);
+  if (!dl) return;
+  var matches = _filtraAna(sede, inputEl.value);
+  // Massimo 50 suggerimenti per non appesantire il DOM
+  dl.innerHTML = matches.slice(0,50).map(function(c){
+    return '<option value="'+c+'"></option>';
+  }).join('');
+}
+
+// ── AUTOCOMPLETE ARTICOLI ─────────────────────────────────
+// Collega l'autocomplete in-memory a tutti i campi articolo.
+// Chiamata una volta dopo DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', function() {
+  _initAutocomplete();
+  ['no-nordine','no-anno'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', _noAggiornaPreview);
+  });
+  var annoEl = document.getElementById('no-anno');
+  if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
+});
+function _initAutocomplete() {
+  var campi = [
+    {id:'car-articolo', onSel: onArticoloSelezionato},
+    {id:'ape-articolo', onSel: onArticoloAperturaSelezionato},
+    {id:'sca-articolo', onSel: caricaLottiScarico},
+  ];
+  campi.forEach(function(cfg) {
+    var el = document.getElementById(cfg.id);
+    if (!el) return;
+    // Assicura che abbia un datalist dedicato
+    var dlId = el.getAttribute('list') || (cfg.id + '-dl');
+    el.setAttribute('list', dlId);
+    if (!document.getElementById(dlId)) {
+      var dl = document.createElement('datalist');
+      dl.id = dlId;
+      el.parentNode.insertBefore(dl, el.nextSibling);
+    }
+    el.addEventListener('input', function() {
+      _aggiornaSuggerimenti(el, currentSede);
+    });
+    el.addEventListener('change', function() {
+      if (cfg.onSel) cfg.onSel();
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// NUOVO ORDINE MULTIPLO
+// ══════════════════════════════════════════════════════════
+
+var _noRigheCount = 0; // counter righe dinamiche
+
+function _noAggiornaPreview() {
+  var n    = (document.getElementById('no-nordine').value||'').trim();
+  var anno = (document.getElementById('no-anno').value||'').trim();
+  var wrap = document.getElementById('no-id-preview-wrap');
+  var prev = document.getElementById('no-id-preview');
+  if (n && anno) {
+    prev.textContent = 'ORD-' + n + '-' + anno;
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// Aggiunge una scheda prodotto alla lista ordine
+function noAggiungiRiga(precompila) {
+  var idx   = _noRigheCount++;
+  var wrap  = document.getElementById('no-righe-wrap');
+  var dlId  = 'no-art-dl-' + idx;
+  var div   = document.createElement('div');
+  div.className  = 'no-riga card';
+  div.dataset.idx= idx;
+  div.style.cssText = 'margin-bottom:10px;position:relative;';
+  var artVal = (precompila && precompila.codice) ? precompila.codice : '';
+  var qtaVal = (precompila && precompila.qta)    ? precompila.qta    : '';
+  div.innerHTML = [
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
+    '  <span style="font-size:13px;color:var(--txt2);font-weight:600;">Prodotto #'+(idx+1)+'</span>',
+    '  <button onclick="noRimuoviRiga(this)" style="background:none;border:none;',
+    '    color:#ef4444;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;">×</button>',
+    '</div>',
+    '<div class="field">',
+    '  <label>Articolo <span class="req">*</span></label>',
+    '  <input type="text" class="no-art-input" list="'+dlId+'"',
+    '    placeholder="Cerca articolo (3 lettere)..."',
+    '    value="'+artVal+'" autocomplete="off"',
+    '    oninput="_noFiltroArt(this)" onchange="_noOnArtChange(this)">',
+    '  <datalist id="'+dlId+'"></datalist>',
+    '</div>',
+    '<div class="field">',
+    '  <label>Quantità <span class="req">*</span></label>',
+    '  <input type="number" class="no-qta-input" min="1" step="1"',
+    '    placeholder="Quantità" value="'+qtaVal+'">',
+    '</div>',
+  ].join('');
+  wrap.appendChild(div);
+  // Popola datalist con tutta l'anagrafica al primo focus
+  var artInput = div.querySelector('.no-art-input');
+  artInput.addEventListener('focus', function() {
+    _aggiornaSuggerimenti(artInput, currentSede);
+  });
+}
+
+function noRimuoviRiga(btn) {
+  btn.closest('.no-riga').remove();
+}
+
+function _noFiltroArt(input) {
+  _aggiornaSuggerimenti(input, currentSede);
+}
+
+function _noOnArtChange(input) {
+  // Verifica che l'articolo esista nell'anagrafica
+  var val = input.value.trim().toUpperCase();
+  if (!val) return;
+  var item = _getAnaItem(currentSede, val);
+  if (!item) {
+    input.style.borderColor = '#ef4444';
+    input.title = 'Articolo non trovato in anagrafica';
+  } else {
+    input.style.borderColor = '';
+    input.title = '';
+    // Normalizza al codice esatto
+    input.value = item.codice;
+  }
+}
+
+async function noInvia() {
+  var n       = (document.getElementById('no-nordine').value||'').trim();
+  var anno    = (document.getElementById('no-anno').value||'').trim();
+  var fornit  = (document.getElementById('no-fornitore').value||'').trim();
+  var dataOrd = document.getElementById('no-data-ord').value;
+  var lab     = (document.getElementById('no-lab').value||'').trim();
+
+  if (!n)      { toast('Inserisci il numero ordine', 'warning'); return; }
+  if (!anno)   { toast('Inserisci l\'anno ordine',    'warning'); return; }
+  if (!fornit) { toast('Inserisci il fornitore',      'warning'); return; }
+
+  // Raccoglie prodotti dalla lista
+  var righe = [];
+  var divs  = document.querySelectorAll('.no-riga');
+  for (var i=0; i<divs.length; i++) {
+    var art = (divs[i].querySelector('.no-art-input').value||'').trim().toUpperCase();
+    var qta = parseFloat((divs[i].querySelector('.no-qta-input').value||'0').replace(',','.')) || 0;
+    if (!art) { toast('Prodotto #'+(i+1)+': articolo mancante', 'warning'); return; }
+    if (qta<=0){ toast('Prodotto '+art+': quantità non valida', 'warning'); return; }
+    // Verifica anagrafica
+    if (!_getAnaItem(currentSede, art)) {
+      toast('Prodotto "'+art+'" non presente in anagrafica', 'warning'); return;
+    }
+    righe.push({art:art, qta:qta});
+  }
+  if (!righe.length) { toast('Aggiungi almeno un prodotto', 'warning'); return; }
+
+  // Mostra progresso
+  var prog    = document.getElementById('no-progress');
+  var progBar = document.getElementById('no-progress-bar');
+  var progTxt = document.getElementById('no-progress-txt');
+  prog.style.display = '';
+  progBar.style.width = '20%';
+  progTxt.textContent = 'Invio ordine ' + n + ' prodotti...';
+
+  var params = {
+    action:      'nuovo_ordine',
+    sede:        currentSede,
+    lab:         lab,
+    n_ordine:    n,
+    anno:        anno,
+    fornitore:   fornit,
+    data_ordine: dataOrd ? _isoToIta(dataOrd) : '',
+    prodotti:    JSON.stringify(righe),
+  };
+
+  progBar.style.width = '50%';
+  var d = await apiCall(params, 60000);
+  progBar.style.width = '100%';
+
+  if (!d || !d.ok) {
+    prog.style.display = 'none';
+    toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
+    return;
+  }
+
+  prog.style.display = 'none';
+  toast('✅ ' + d.messaggio, 'success');
+
+  // Svuota form
+  document.getElementById('no-nordine').value  = '';
+  document.getElementById('no-anno').value     = '';
+  document.getElementById('no-fornitore').value= '';
+  document.getElementById('no-data-ord').value = '';
+  document.getElementById('no-lab').value      = '';
+  document.getElementById('no-righe-wrap').innerHTML = '';
+  document.getElementById('no-id-preview-wrap').style.display = 'none';
+  _noRigheCount = 0;
+
+  showPage('page-ordini');
+  loadHomeStats();
+}
+
+// ══════════════════════════════════════════════════════════
+// CARICO MULTIPLO DA ORDINE
+// ══════════════════════════════════════════════════════════
+
+var _cmOrdineCorrente = null; // dati ordine selezionato
+
+// Apre la pagina carico multiplo per un ordine
+async function apriCaricoMultiplo(idOrdine) {
+  _cmOrdineCorrente = null;
+  document.getElementById('cm-righe-wrap').innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--txt2);">Caricamento...</div>';
+  document.getElementById('cm-ordine-info').innerHTML = '';
+  document.getElementById('cm-lab').value      = '';
+  document.getElementById('cm-tecnico').value  = '';
+  document.getElementById('cm-colloc-all').value= '';
+  document.getElementById('cm-data').value     = new Date().toISOString().slice(0,10);
+  document.getElementById('cm-progress').style.display = 'none';
+  // Popola datalist laboratori e tecnici per il form CM
+  _loadDatalist('list-lab-cm',  {action:'laboratori'}, _LAB_FALLBACK);
+  _loadDatalist('list-tecnici', {action:'tecnici'},    _TEC_FALLBACK);
+  _loadDatalist('list-colloc',  {action:'collocazioni'}, _COLLOC_FALLBACK);
+  showPage('page-carico-multiplo');
+
+  // Carica dati ordine
+  var d = await apiCall({action:'ordini', sede:currentSede});
+  if (!d || !d.ok) {
+    document.getElementById('cm-righe-wrap').innerHTML =
+      '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
+    return;
+  }
+
+  var ordine = (d.dati||[]).find(function(o){
+    return o.id.toUpperCase() === idOrdine.toUpperCase();
+  });
+  if (!ordine) {
+    document.getElementById('cm-righe-wrap').innerHTML =
+      '<div style="color:#ef4444;padding:12px;">Ordine '+idOrdine+' non trovato</div>';
+    return;
+  }
+  _cmOrdineCorrente = ordine;
+
+  // Info ordine
+  var fornitore = (ordine.prodotti[0]||{}).fornitore || '';
+  document.getElementById('cm-ordine-info').innerHTML =
+    '<strong>' + ordine.id + '</strong>' +
+    (fornitore ? ' — ' + fornitore : '') +
+    ' <span style="color:var(--txt2);font-size:13px;">(' + ordine.stato + ')</span>';
+
+  // Costruisce schede prodotti
+  _cmBuildRighe(ordine);
+}
+
+function _cmBuildRighe(ordine) {
+  var wrap = document.getElementById('cm-righe-wrap');
+  wrap.innerHTML = '';
+  var prodotti = ordine.prodotti || [];
+  if (!prodotti.length) {
+    wrap.innerHTML = '<div style="padding:12px;color:var(--txt2);">Nessun prodotto in questo ordine</div>';
+    return;
+  }
+
+  prodotti.forEach(function(pr, idx) {
+    var rim = parseFloat(pr.rimanente) || 0;
+    var ana = _getAnaItem(currentSede, pr.articolo) || {};
+    var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
+    var div = document.createElement('div');
+    div.className = 'cm-riga card';
+    div.dataset.idx = idx;
+    div.dataset.art = pr.articolo;
+    div.style.cssText = 'margin-bottom:12px;opacity:' + (rim<=0?'0.5':'1') + ';';
+
+    var badge = rim > 0
+      ? '<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">da caricare: '+rim+'</span>'
+      : '<span style="background:#f1f5f9;color:#64748b;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">evaso</span>';
+
+    div.innerHTML = [
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">',
+      '  <div>',
+      '    <span style="font-weight:700;font-size:14px;">'+pr.articolo+'</span>',
+      badge,
+      '  </div>',
+      '  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">',
+      '    <input type="checkbox" class="cm-includi" '+(rim>0?'checked':'')+'',
+      '      onchange="_cmToggleRiga(this)"> includi',
+      '  </label>',
+      '</div>',
+      '<div class="cm-fields" style="'+(rim<=0?'display:none':'')+'">',
+      '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
+      '    <div class="field" style="margin:0;">',
+      '      <label style="font-size:12px;">Quantità</label>',
+      '      <input type="number" class="cm-qta" value="'+(rim>0?rim:'')+'" min="0.01" step="any">',
+      '    </div>',
+      '    <div class="field" style="margin:0;">',
+      '      <label style="font-size:12px;">Tracciabilità</label>',
+      '      <select class="cm-tracc" onchange="_cmToggleTracc(this)">',
+      '        <option value="NO"' + (tracc !== 'SI' ? ' selected' : '') + '>NO</option>',
+      '        <option value="SI"' + (tracc === 'SI' ? ' selected' : '') + '>SI</option>',
+      '      </select>',
+      '    </div>',
+      '  </div>',
+      '  <div class="cm-lotto-wrap" style="display:' + (tracc === 'SI' ? '' : 'none') + ';">',
+      '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
+      '      <div class="field" style="margin:0;">',
+      '        <label style="font-size:12px;">Lotto</label>',
+      '        <input type="text" class="cm-lotto" placeholder="N. lotto">',
+      '      </div>',
+      '      <div class="field" style="margin:0;">',
+      '        <label style="font-size:12px;">Scadenza</label>',
+      '        <input type="date" class="cm-scad">',
+      '      </div>',
+      '    </div>',
+      '  </div>',
+      '  <div class="field" style="margin-bottom:8px;">',
+      '    <label style="font-size:12px;">Collocazione</label>',
+      '    <input type="text" class="cm-colloc" list="list-colloc" autocomplete="off">',
+      '  </div>',
+      '  <div class="field" style="margin:0;">',
+      '    <label style="font-size:12px;">Note</label>',
+      '    <input type="text" class="cm-note" placeholder="Note opzionali">',
+      '  </div>',
+      '</div>',
+    ].join('');
+    wrap.appendChild(div);
+  });
+}
+
+function _cmToggleRiga(cb) {
+  var riga   = cb.closest('.cm-riga');
+  var fields = riga.querySelector('.cm-fields');
+  fields.style.display = cb.checked ? '' : 'none';
+  riga.style.opacity   = cb.checked ? '1' : '0.5';
+}
+
+function _cmToggleTracc(sel) {
+  var riga = sel.closest('.cm-riga');
+  var wrap = riga.querySelector('.cm-lotto-wrap');
+  wrap.style.display = (sel.value === 'SI') ? '' : 'none';
+}
+
+function cmApplicaCollocazione() {
+  var val = (document.getElementById('cm-colloc-all').value||'').trim();
+  if (!val) { toast('Inserisci una collocazione da applicare', 'warning'); return; }
+  document.querySelectorAll('.cm-colloc').forEach(function(el){
+    if (el.closest('.cm-riga').querySelector('.cm-includi').checked) el.value = val;
+  });
+  toast('Collocazione "'+val+'" applicata a tutte le righe incluse', 'success');
+}
+
+async function cmInvia() {
+  var lab      = (document.getElementById('cm-lab').value||'').trim();
+  var tecnico  = (document.getElementById('cm-tecnico').value||'').trim();
+  var dataVal  = document.getElementById('cm-data').value;
+
+  if (!lab)    { toast('Inserisci il laboratorio', 'warning'); return; }
+  if (!tecnico) { toast('Inserisci il tecnico', 'warning'); return; }
+  if (!_cmOrdineCorrente) { toast('Nessun ordine selezionato', 'error'); return; }
+
+  // Raccoglie righe incluse
+  var righe = [];
+  var divs  = document.querySelectorAll('.cm-riga');
+  for (var i=0; i<divs.length; i++) {
+    var d2     = divs[i];
+    var includi= d2.querySelector('.cm-includi').checked;
+    if (!includi) continue;
+    var art   = d2.dataset.art;
+    var qta   = parseFloat((d2.querySelector('.cm-qta').value||'0').replace(',','.')) || 0;
+    var tracc = d2.querySelector('.cm-tracc').value;
+    var lotto = (d2.querySelector('.cm-lotto').value||'').trim();
+    var scadIso=(d2.querySelector('.cm-scad').value||'').trim();
+    var colloc= (d2.querySelector('.cm-colloc').value||'').trim();
+    var note  = (d2.querySelector('.cm-note').value||'').trim();
+
+    if (qta<=0) { toast('Articolo '+art+': quantità non valida', 'warning'); return; }
+    if (tracc==='SI' && !lotto) { toast('Articolo '+art+': lotto obbligatorio', 'warning'); return; }
+
+    righe.push({
+      articolo:     art,
+      quantita:     qta,
+      tracc:        tracc,
+      lotto:        lotto,
+      scadenza:     scadIso ? _isoToIta(scadIso) : '',
+      collocazione: colloc,
+      note:         note,
+    });
+  }
+  if (!righe.length) { toast('Nessuna riga inclusa', 'warning'); return; }
+
+  // Progresso
+  var prog    = document.getElementById('cm-progress');
+  var progBar = document.getElementById('cm-progress-bar');
+  var progTxt = document.getElementById('cm-progress-txt');
+  prog.style.display  = '';
+  progBar.style.width = '10%';
+  progTxt.textContent = 'Invio ' + righe.length + ' carichi...';
+
+  var nonce = 'cm_' + _cmOrdineCorrente.id + '_' + Date.now();
+  var params = {
+    action:  'carico_multiplo',
+    sede:    currentSede,
+    lab:     lab,
+    tecnico: tecnico,
+    ordine:  _cmOrdineCorrente.id,
+    data:    dataVal ? _isoToIta(dataVal) : '',
+    nonce:   nonce,
+    righe:   JSON.stringify(righe),
+  };
+
+  progBar.style.width = '40%';
+  var d = await apiCall(params, 120000);
+  progBar.style.width = '100%';
+  prog.style.display  = 'none';
+
+  if (!d || !d.ok) {
+    toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
+    if (d && d.errore) toast('Controlla il registro per eventuali duplicati', 'warning');
+    return;
+  }
+
+  var msg = '✅ ' + d.messaggio;
+  if (d.errori && d.errori.length)
+    msg += ' | ⚠ ' + d.errori.length + ' saltati: ' + d.errori[0];
+  toast(msg, 'success');
+
+  showPage('page-ordini');
+  loadHomeStats();
+}
+
 // ── CONFIG ──────────────────────────────────────────────────
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
@@ -746,6 +1356,9 @@ function showPage(id) {
     _loadSelect('sca-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
     _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
     _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
+  } else if (id === 'page-nuovo-ordine') {
+    _loadDatalist('list-lab-no',  {action:'laboratori'}, _LAB_FALLBACK);
+    _loadDatalist('list-tecnici', {action:'tecnici'},    _TEC_FALLBACK);
   }
 }
 
@@ -843,6 +1456,8 @@ var _COLLOC_FALLBACK = [
 
 // ── SEDE ────────────────────────────────────────────────────
 async function setSede(s) {
+  // Precarica anagrafica in-memory per autocomplete istantaneo
+  _loadAnagrafica(s).catch(function(){});
   if (s === currentSede) return;
   var ov  = document.getElementById('overlayWait');
   var ovP = document.querySelector('#overlayWait p');
@@ -1040,9 +1655,17 @@ function renderOrdini() {
       '<span class="ord-id">' + o.id + '</span>' +
       '<span class="ord-stato ' + cls + '">' + (o.stato||'—') + '</span>' +
       '</div>' + prods +
-      '<div style="font-size:11px;color:var(--txt3);margin-top:6px;">&#9654; Tocca per i dettagli</div></div>';
+      '<div style="font-size:11px;color:var(--txt3);margin-top:6px;">&#9654; Tocca per i dettagli</div>' + (o.stato !== 'EVASO' ? '<button class="cm-open-btn" data-id="' + o.id + '" style="margin-top:10px;width:100%;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">&#128230; Carica Multiplo</button>' : '') + '</div>';
   }).join('');
 }
+
+// Event delegation per pulsanti Carica Multiplo
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.classList.contains('cm-open-btn')) {
+    var id = e.target.getAttribute('data-id');
+    if (id) apriCaricoMultiplo(id);
+  }
+});
 
 // ── REGISTRO ─────────────────────────────────────────────────
 async function loadRegistro() {
