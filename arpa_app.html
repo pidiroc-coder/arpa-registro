@@ -629,7 +629,8 @@
   </div>
   <div class="search-wrap" style="margin-bottom:8px;">
     <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    <input type="text" id="ordSearch" oninput="renderOrdini()" style="padding-left:38px;" placeholder="Cerca ordine...">
+    <input type="text" id="ordSearch" list="list-ord-search" oninput="renderOrdini()" style="padding-left:38px;" placeholder="Cerca ordine o articolo..." autocomplete="off">
+    <datalist id="list-ord-search"></datalist>
   </div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="filterOrdini(this,'ALL')">Tutti</div>
@@ -1028,10 +1029,6 @@ async function noInvia() {
     var qta = parseFloat((divs[i].querySelector('.no-qta-input').value||'0').replace(',','.')) || 0;
     if (!art) { toast('Prodotto #'+(i+1)+': articolo mancante', 'warning'); return; }
     if (qta<=0){ toast('Prodotto '+art+': quantità non valida', 'warning'); return; }
-    // Verifica anagrafica
-    if (!_getAnaItem(currentSede, art)) {
-      toast('Prodotto "'+art+'" non presente in anagrafica', 'warning'); return;
-    }
     righe.push({art:art, qta:qta});
   }
   if (!righe.length) { toast('Aggiungi almeno un prodotto', 'warning'); return; }
@@ -1117,17 +1114,22 @@ async function apriCaricoMultiplo(idOrdine) {
   _loadDatalist('list-colloc',  {action:'collocazioni'}, _COLLOC_FALLBACK);
   showPage('page-carico-multiplo');
 
-  // Carica dati ordine
-  var d = await apiCall({action:'ordini', sede:currentSede});
-  if (!d || !d.ok) {
-    document.getElementById('cm-righe-wrap').innerHTML =
-      '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
-    return;
-  }
-
-  var ordine = (d.dati||[]).find(function(o){
+  // Cerca prima in _dataOrdini (già in memoria), poi fallback API
+  var ordine = (_dataOrdini||[]).find(function(o){
     return o.id.toUpperCase() === idOrdine.toUpperCase();
   });
+  if (!ordine) {
+    var d = await apiCall({action:'ordini', sede:currentSede});
+    if (!d || !d.ok) {
+      document.getElementById('cm-righe-wrap').innerHTML =
+        '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
+      return;
+    }
+    _dataOrdini = d.dati || [];
+    ordine = _dataOrdini.find(function(o){
+      return o.id.toUpperCase() === idOrdine.toUpperCase();
+    });
+  }
   if (!ordine) {
     document.getElementById('cm-righe-wrap').innerHTML =
       '<div style="color:#ef4444;padding:12px;">Ordine '+idOrdine+' non trovato</div>';
@@ -1676,6 +1678,18 @@ function filterOrdini(el, stato) {
 function renderOrdini() {
   var list = document.getElementById('ordiniList');
   var search = ((document.getElementById('ordSearch')||{}).value||'').toLowerCase();
+  // Aggiorna datalist suggerimenti con ID ordine e articoli
+  var dlOrd = document.getElementById('list-ord-search');
+  if (dlOrd && _dataOrdini && _dataOrdini.length) {
+    var suggestions = {};
+    _dataOrdini.forEach(function(o) {
+      suggestions[o.id] = true;
+      (o.prodotti||[]).forEach(function(p){ if(p.articolo) suggestions[p.articolo] = true; });
+    });
+    dlOrd.innerHTML = Object.keys(suggestions).sort().map(function(v){
+      return '<option value="'+v+'">';
+    }).join('');
+  }
   var data = _dataOrdini.filter(function(o) {
     var statoOk = ordStatoFilter === 'ALL' || o.stato === ordStatoFilter;
     var txtOk = !search || o.id.toLowerCase().indexOf(search) !== -1 ||
@@ -1817,20 +1831,31 @@ function renderGiacenze() {
 }
 
 // ── FORM HELPERS ─────────────────────────────────────────────
-async function loadOrdiniSelect(selId) {
+function _popolaOrdiniSelect(selId, dati) {
   var sel = document.getElementById(selId);
-  sel.innerHTML = '<option value="">caricamento...</option>';
-  var d = await apiCall({action: 'ordini', sede: currentSede});
+  if (!sel) return;
   sel.innerHTML = '<option value="">— seleziona ordine —</option>';
-  if (d && d.ok) {
-    (d.dati || []).forEach(function(o) {
-      if (o.stato === 'EVASO') return; // v77: solo ordini da evadere
-      var opt = document.createElement('option');
-      opt.value = o.id;
-      opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
-      sel.appendChild(opt);
-    });
+  (dati || []).forEach(function(o) {
+    if (o.stato === 'EVASO') return;
+    var opt = document.createElement('option');
+    opt.value = o.id;
+    opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
+    sel.appendChild(opt);
+  });
+}
+
+async function loadOrdiniSelect(selId) {
+  // Usa _dataOrdini già in memoria — nessuna API call aggiuntiva
+  if (_dataOrdini && _dataOrdini.length) {
+    _popolaOrdiniSelect(selId, _dataOrdini);
+    return;
   }
+  // Fallback: carica ordini se non ancora in cache
+  var sel = document.getElementById(selId);
+  if (sel) sel.innerHTML = '<option value="">caricamento...</option>';
+  var d = await apiCall({action: 'ordini', sede: currentSede});
+  if (d && d.ok) _dataOrdini = d.dati || [];
+  _popolaOrdiniSelect(selId, _dataOrdini);
 }
 
 // Chiamata quando si seleziona un ordine nel form CARICO
@@ -2273,11 +2298,40 @@ function mostraDettaglioOrdine(o) {
       + (p.fornitore ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">Fornitore: ' + p.fornitore + '</div>' : '')
       + '</div>';
   }).join('');
+  // Pulsanti azione (solo se ordine non evaso)
+  var azioni = '';
+  if (o.stato !== 'EVASO') {
+    azioni = '<div style="display:flex;gap:8px;margin-top:14px;">'
+      + '<button onclick="_apriCaricoConOrdine(\'' + o.id + '\')" '
+      + 'style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">&#128230; Carico</button>'
+      + '<button onclick="apriCaricoMultiplo(\'' + o.id + '\');document.getElementById(\'modalDettaglio\').style.display=\'none\';" '
+      + 'style="flex:1;padding:10px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">&#128218; Carico Multiplo</button>'
+      + '</div>';
+  }
   mostraDettaglio(
     '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">' + o.id + '</div>'
     + '<span class="ord-stato ' + stato + '" style="margin-bottom:12px;display:inline-block;">' + (o.stato||'—') + '</span>'
     + '<div style="font-size:12px;color:#64748b;margin-bottom:12px;">Sede: ' + o.sede + '</div>'
-    + prods);
+    + prods
+    + azioni);
+}
+
+// Apre il form Carico con l'ordine già selezionato
+function _apriCaricoConOrdine(id) {
+  document.getElementById('modalDettaglio').style.display = 'none';
+  showForm('carico');
+  // loadOrdiniSelect è async — attende che le option siano pronte poi pre-seleziona
+  (async function() {
+    var sel = document.getElementById('car-ordine');
+    for (var t = 0; t < 30; t++) {
+      await new Promise(function(r) { setTimeout(r, 100); });
+      if (sel.querySelector('option[value="' + id + '"]')) {
+        sel.value = id;
+        onOrdineSelezionato(id);
+        return;
+      }
+    }
+  })();
 }
 
 function mostraDettaglioMovimento(m) {
