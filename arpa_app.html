@@ -960,6 +960,14 @@ function _noRefreshArtDl() {
   }).join('');
 }
 
+// Freccia dropdown articolo: popola il datalist e porta il focus sull'input
+function _noArtArrow(btn) {
+  var inp = btn.parentNode.querySelector('.no-art-input');
+  if (!inp) return;
+  _noRefreshArtDl();
+  inp.focus();
+}
+
 // Aggiunge una scheda prodotto alla lista ordine
 function noAggiungiRiga(precompila) {
   var idx   = _noRigheCount++;
@@ -978,10 +986,17 @@ function noAggiungiRiga(precompila) {
     '</div>',
     '<div class="field">',
     '  <label>Articolo <span class="req">*</span></label>',
-    '  <input type="text" class="no-art-input" list="list-no-art"',
-    '    placeholder="Cerca o scrivi articolo..."',
-    '    value="'+artVal+'" autocomplete="off"',
-    '    onchange="_noOnArtChange(this)">',
+    '  <div style="position:relative;">',
+    '    <input type="text" class="no-art-input" list="list-no-art"',
+    '      placeholder="Cerca o scrivi articolo..."',
+    '      value="'+artVal+'" autocomplete="off"',
+    '      style="padding-right:32px;"',
+    '      onchange="_noOnArtChange(this)">',
+    '    <button type="button" tabindex="-1" onclick="_noArtArrow(this)"',
+    '      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);',
+    '             background:none;border:none;cursor:pointer;color:var(--txt2);',
+    '             font-size:14px;padding:4px 6px;">&#9660;</button>',
+    '  </div>',
     '</div>',
     '<div class="field">',
     '  <label>Quantità <span class="req">*</span></label>',
@@ -990,6 +1005,19 @@ function noAggiungiRiga(precompila) {
     '</div>',
   ].join('');
   wrap.appendChild(div);
+
+  // Collega focus+input sul campo articolo della riga appena creata
+  var artInp = div.querySelector('.no-art-input');
+  if (artInp) {
+    // Al focus: assicura che il datalist sia già pieno (niente da digitare)
+    artInp.addEventListener('focus', function() {
+      _noRefreshArtDl();
+    });
+    // Mentre si digita: filtra la lista in tempo reale
+    artInp.addEventListener('input', function() {
+      _aggiornaSuggerimenti(this, currentSede);
+    });
+  }
 }
 
 function noRimuoviRiga(btn) {
@@ -1148,6 +1176,8 @@ async function apriCaricoMultiplo(idOrdine, articoliPreSel) {
     (fornitore ? ' — ' + fornitore : '') +
     ' <span style="color:var(--txt2);font-size:13px;">(' + ordine.stato + ')</span>';
 
+  // Assicura cache anagrafica caricata (serve per tracc/udm di ogni prodotto)
+  await _loadAnagrafica(currentSede);
   // Costruisce schede prodotti (con eventuale pre-selezione articoli)
   _cmBuildRighe(ordine, articoliPreSel);
 }
