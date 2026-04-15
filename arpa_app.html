@@ -371,7 +371,12 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Nuovo Carico</h2>
-    <span class="form-badge badge-carico">CARICO</span>
+    <button onclick="aproCaricoMultiploOrdineCorrente()"
+      title="Registra tutti i prodotti dell'ordine in una volta"
+      style="margin-left:auto;padding:7px 12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="2" rx="1" fill="#fff"/><rect x="1" y="7" width="8" height="2" rx="1" fill="#fff"/><rect x="1" y="11" width="10" height="2" rx="1" fill="#fff"/></svg>
+      Carico Multiplo
+    </button>
   </div>
 
   <div class="form-section">
@@ -1085,6 +1090,18 @@ async function noInvia() {
 // ══════════════════════════════════════════════════════════
 
 var _cmOrdineCorrente = null; // dati ordine selezionato
+
+// Chiamata dal tasto "Carico Multiplo" dentro la scheda Carico singolo.
+// Se c'è un ordine già selezionato lo usa direttamente, altrimenti manda alla lista ordini.
+function aproCaricoMultiploOrdineCorrente() {
+  var ordine = (document.getElementById('car-ordine').value || '').trim();
+  if (ordine) {
+    apriCaricoMultiplo(ordine);
+  } else {
+    toast('Seleziona prima un ordine, oppure sceglilo dalla lista Ordini', 'info');
+    showPage('page-ordini');
+  }
+}
 
 // Apre la pagina carico multiplo per un ordine
 async function apriCaricoMultiplo(idOrdine) {
