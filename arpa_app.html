@@ -901,6 +901,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   var annoEl = document.getElementById('no-anno');
   if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
+  // Precarica anagrafica subito così l'autocomplete è pronto
+  _loadAnagrafica(currentSede).catch(function(){});
 });
 function _initAutocomplete() {
   var campi = [
@@ -1114,22 +1116,17 @@ async function apriCaricoMultiplo(idOrdine) {
   _loadDatalist('list-colloc',  {action:'collocazioni'}, _COLLOC_FALLBACK);
   showPage('page-carico-multiplo');
 
-  // Cerca prima in _dataOrdini (già in memoria), poi fallback API
-  var ordine = (_dataOrdini||[]).find(function(o){
+  // Recupera dati freschi dell'ordine (sempre API, per avere rimanente aggiornato)
+  var d = await apiCall({action:'ordini', sede:currentSede});
+  if (!d || !d.ok) {
+    document.getElementById('cm-righe-wrap').innerHTML =
+      '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
+    return;
+  }
+  if (d.dati) _dataOrdini = d.dati; // aggiorna la cache
+  var ordine = (d.dati||[]).find(function(o){
     return o.id.toUpperCase() === idOrdine.toUpperCase();
   });
-  if (!ordine) {
-    var d = await apiCall({action:'ordini', sede:currentSede});
-    if (!d || !d.ok) {
-      document.getElementById('cm-righe-wrap').innerHTML =
-        '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
-      return;
-    }
-    _dataOrdini = d.dati || [];
-    ordine = _dataOrdini.find(function(o){
-      return o.id.toUpperCase() === idOrdine.toUpperCase();
-    });
-  }
   if (!ordine) {
     document.getElementById('cm-righe-wrap').innerHTML =
       '<div style="color:#ef4444;padding:12px;">Ordine '+idOrdine+' non trovato</div>';
@@ -1153,8 +1150,14 @@ function _cmBuildRighe(ordine) {
   wrap.innerHTML = '';
   var prodotti = ordine.prodotti || [];
   if (!prodotti.length) {
-    wrap.innerHTML = '<div style="padding:12px;color:var(--txt2);">Nessun prodotto in questo ordine</div>';
+    wrap.innerHTML = '<div style="padding:12px;color:var(--txt2);">Nessun prodotto registrato per questo ordine.</div>';
     return;
+  }
+  // Avvisa se l'ordine è già completamente caricato
+  var tuttiEvasi = prodotti.every(function(p){ return (parseFloat(p.rimanente)||0) <= 0; });
+  if (tuttiEvasi) {
+    wrap.innerHTML += '<div style="background:#fef9c3;border:1px solid #fbbf24;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#92400e;">'
+      + '&#9888; Ordine già completamente caricato. Puoi includere manualmente una riga per correggere.</div>';
   }
 
   prodotti.forEach(function(pr, idx) {
@@ -1165,7 +1168,8 @@ function _cmBuildRighe(ordine) {
     div.className = 'cm-riga card';
     div.dataset.idx = idx;
     div.dataset.art = pr.articolo;
-    div.style.cssText = 'margin-bottom:12px;opacity:' + (rim<=0?'0.5':'1') + ';';
+    // Evaso: visibile ma senza opacità ridotta (l'utente capisce dallo stato)
+    div.style.cssText = 'margin-bottom:12px;';
 
     var badge = rim > 0
       ? '<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">da caricare: '+rim+'</span>'
@@ -1182,7 +1186,8 @@ function _cmBuildRighe(ordine) {
       '      onchange="_cmToggleRiga(this)"> includi',
       '  </label>',
       '</div>',
-      '<div class="cm-fields" style="'+(rim<=0?'display:none':'')+'">',
+      // Mostra i campi se rimanente>0 OPPURE se checkbox è selezionata manualmente
+      '<div class="cm-fields" style="'+(rim>0?'':'display:none')+'">',
       '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
       '    <div class="field" style="margin:0;">',
       '      <label style="font-size:12px;">Quantità</label>',
