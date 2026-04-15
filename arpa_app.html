@@ -765,6 +765,8 @@
     <h3 style="margin:0;font-size:15px;">Prodotti</h3>
   </div>
   <datalist id="list-no-art"></datalist>
+  <datalist id="list-ana-cb"></datalist>
+  <datalist id="list-ana-is"></datalist>
   <div id="no-righe-wrap"></div>
   <button class="btn-add-row" onclick="noAggiungiRiga()" style="width:100%;padding:11px;margin-top:8px;border-radius:10px;font-size:14px;">
     + Aggiungi Prodotto
@@ -855,6 +857,11 @@ async function _loadAnagrafica(sede) {
     if (d && d.ok && d.dati) {
       _cacheAna[sede]   = d.dati;
       _cacheAnaTs[sede] = Date.now();
+      // Popola la datalist globale per-sede: la freccia ▾ appare subito
+      var _dl = document.getElementById('list-ana-' + sede.toLowerCase());
+      if (_dl) _dl.innerHTML = d.dati.map(function(x){
+        return '<option value="' + x.codice + '">';
+      }).join('');
     }
   } catch(e) { console.warn('_loadAnagrafica:', e); }
 }
@@ -960,11 +967,12 @@ function _noRefreshArtDl() {
   }).join('');
 }
 
-// Freccia dropdown articolo: popola il datalist e porta il focus sull'input
+// Freccia dropdown articolo: mostra tutti i prodotti e porta il focus
 function _noArtArrow(btn) {
   var inp = btn.parentNode.querySelector('.no-art-input');
   if (!inp) return;
-  _noRefreshArtDl();
+  // Azzera il filtro → la datalist mostra tutti gli articoli
+  _aggiornaSuggerimenti(inp, currentSede);
   inp.focus();
 }
 
@@ -987,7 +995,8 @@ function noAggiungiRiga(precompila) {
     '<div class="field">',
     '  <label>Articolo <span class="req">*</span></label>',
     '  <div style="position:relative;">',
-    '    <input type="text" class="no-art-input" list="list-no-art"',
+    '    <input type="text" class="no-art-input"',
+    '      list="list-ana-' + currentSede.toLowerCase() + '"',
     '      placeholder="Cerca o scrivi articolo..."',
     '      value="'+artVal+'" autocomplete="off"',
     '      style="padding-right:32px;"',
@@ -1009,9 +1018,9 @@ function noAggiungiRiga(precompila) {
   // Collega focus+input sul campo articolo della riga appena creata
   var artInp = div.querySelector('.no-art-input');
   if (artInp) {
-    // Al focus: assicura che il datalist sia già pieno (niente da digitare)
+    // Al focus: popola subito la datalist con tutti gli articoli
     artInp.addEventListener('focus', function() {
-      _noRefreshArtDl();
+      _aggiornaSuggerimenti(this, currentSede);
     });
     // Mentre si digita: filtra la lista in tempo reale
     artInp.addEventListener('input', function() {
