@@ -732,7 +732,7 @@
   <div class="card" style="margin-bottom:12px;">
     <div class="field">
       <label>Laboratorio <span class="req">*</span></label>
-      <input type="text" id="no-lab" list="list-lab-no" autocomplete="off" placeholder="Seleziona laboratorio">
+      <input type="text" id="no-lab" list="list-lab" autocomplete="off" placeholder="Seleziona laboratorio">
       <datalist id="list-lab-no"></datalist>
     </div>
     <div class="field-row">
@@ -767,6 +767,7 @@
   <datalist id="list-no-art"></datalist>
   <datalist id="list-ana-cb"></datalist>
   <datalist id="list-ana-is"></datalist>
+  <datalist id="list-lab"></datalist>
   <div id="no-righe-wrap"></div>
   <button class="btn-add-row" onclick="noAggiungiRiga()" style="width:100%;padding:11px;margin-top:8px;border-radius:10px;font-size:14px;">
     + Aggiungi Prodotto
@@ -994,18 +995,11 @@ function noAggiungiRiga(precompila) {
     '</div>',
     '<div class="field">',
     '  <label>Articolo <span class="req">*</span></label>',
-    '  <div style="position:relative;">',
-    '    <input type="text" class="no-art-input"',
-    '      list="list-ana-' + currentSede.toLowerCase() + '"',
-    '      placeholder="Cerca o scrivi articolo..."',
-    '      value="'+artVal+'" autocomplete="off"',
-    '      style="padding-right:32px;"',
-    '      onchange="_noOnArtChange(this)">',
-    '    <button type="button" tabindex="-1" onclick="_noArtArrow(this)"',
-    '      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);',
-    '             background:none;border:none;cursor:pointer;color:var(--txt2);',
-    '             font-size:14px;padding:4px 6px;">&#9660;</button>',
-    '  </div>',
+    '  <input type="text" class="no-art-input"',
+    '    list="list-ana-' + currentSede.toLowerCase() + '"',
+    '    placeholder="Cerca o scrivi articolo..."',
+    '    value="'+artVal+'" autocomplete="off"',
+    '    onchange="_noOnArtChange(this)">',
     '</div>',
     '<div class="field">',
     '  <label>Quantità <span class="req">*</span></label>',
@@ -1034,9 +1028,11 @@ function noRimuoviRiga(btn) {
 }
 
 function _noOnArtChange(input) {
-  // Verifica che l'articolo esista nell'anagrafica
   var val = input.value.trim().toUpperCase();
   if (!val) return;
+  // Se la cache non è ancora caricata non bloccare: il backend validerà
+  var cacheLoaded = _cacheAna[currentSede] && _cacheAna[currentSede].length > 0;
+  if (!cacheLoaded) { input.style.borderColor = ''; input.title = ''; return; }
   var item = _getAnaItem(currentSede, val);
   if (!item) {
     input.style.borderColor = '#ef4444';
@@ -1458,7 +1454,7 @@ function showPage(id) {
     _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
     _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   } else if (id === 'page-nuovo-ordine') {
-    _loadDatalist('list-lab-no', {action:'laboratori'}, _LAB_FALLBACK);
+    _loadDatalist('list-lab', {action:'laboratori'}, _LAB_FALLBACK);
     // Data ordine: precompila con oggi se vuota
     var dateEl = document.getElementById('no-data-ord');
     if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
@@ -1583,8 +1579,10 @@ var _COLLOC_FALLBACK = [
 
 // ── SEDE ────────────────────────────────────────────────────
 async function setSede(s) {
-  // Precarica anagrafica in-memory per autocomplete istantaneo
+  // Precarica anagrafica, laboratori e collocazioni per la nuova sede
   _loadAnagrafica(s).catch(function(){});
+  _loadDatalist('list-lab',    {action:'laboratori'},   _LAB_FALLBACK);
+  _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   if (s === currentSede) return;
   var ov  = document.getElementById('overlayWait');
   var ovP = document.querySelector('#overlayWait p');
