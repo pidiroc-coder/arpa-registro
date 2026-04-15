@@ -286,10 +286,11 @@
 
   <div class="op-grid">
     <div class="op-btn" onclick="showPage('page-nuovo-ordine')">
-      <div class="op-icon blu">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <div class="op-icon grn">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </div>
-      <div class="op-label">Nuovo Ordine</div>
+      <span class="op-label">Nuovo Ordine</span>
+      <span class="op-desc">Crea ordine d'acquisto</span>
     </div>
     <div class="op-btn" onclick="showPage('page-ordini')">
       <div class="op-icon blu">
@@ -622,6 +623,11 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Ordini</h2>
+    <button onclick="showPage('page-nuovo-ordine')"
+      style="margin-left:auto;padding:8px 14px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      Nuovo Ordine
+    </button>
   </div>
   <div class="search-wrap" style="margin-bottom:8px;">
     <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1638,7 +1644,15 @@ function renderOrdini() {
       (o.prodotti||[]).some(function(p){ return p.articolo.toLowerCase().indexOf(search) !== -1; });
     return statoOk && txtOk;
   });
-  if (!data.length) { list.innerHTML = '<div class="empty">Nessun ordine trovato</div>'; return; }
+  if (!data.length) {
+    list.innerHTML = '<div class="empty">' +
+      (search || ordStatoFilter !== 'ALL'
+        ? 'Nessun ordine trovato con i filtri selezionati'
+        : 'Nessun ordine presente.<br><br>' +
+          '<button onclick="showPage(\'page-nuovo-ordine\')" style="padding:10px 20px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">+ Crea il primo ordine</button>') +
+      '</div>';
+    return;
+  }
   window._ordiniFiltered = data;
   list.innerHTML = data.map(function(o, idx) {
     var cls = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
@@ -1660,8 +1674,10 @@ function renderOrdini() {
 }
 
 // Event delegation per pulsanti Carica Multiplo
+// stopPropagation evita che il click raggiunga il card onclick (mostraDettaglioOrdine)
 document.addEventListener('click', function(e) {
   if (e.target && e.target.classList.contains('cm-open-btn')) {
+    e.stopPropagation();
     var id = e.target.getAttribute('data-id');
     if (id) apriCaricoMultiplo(id);
   }
