@@ -1378,6 +1378,9 @@ var _dataOrdini   = [];
 var _dataRegistro = [];
 var _dataGiacenze = [];
 
+var _cacheAna   = {};   // { sede: [ {codice, descrizione, ...} ] }
+var _cacheAnaTs = {};   // { sede: timestamp ultimo caricamento }
+
 // ── NAVIGAZIONE ──────────────────────────────────────────────
 // ── DATE UTILS ────────────────────────────────────────────────
 // input type="date" restituisce YYYY-MM-DD; il foglio usa dd/mm/yyyy
