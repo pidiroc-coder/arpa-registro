@@ -29,8 +29,6 @@
     --bord:   #e2e8f0;
     --shadow: 0 2px 12px rgba(0,0,0,0.08);
     --rad:    16px;
-    --primary:      #3b82f6;
-    --primary-soft: #eff6ff;
     --radSm:  10px;
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -189,9 +187,6 @@
   /* ── BOTTOM NAV placeholder (padding) ── */
   .page-content { padding-bottom:20px; }
 
-  /* ── CARD generica (Nuovo Ordine / Carico Multiplo) ── */
-  .card { background:var(--card); border:1px solid var(--bord); border-radius:var(--rad); padding:16px; box-shadow:var(--shadow); }
-
   /* ── OVERLAY CLESSIDRA ── */
   .overlay-wait {
     position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
@@ -285,6 +280,12 @@
   </div>
 
   <div class="op-grid">
+    <div class="op-btn" onclick="showPage('page-nuovo-ordine')">
+      <div class="op-icon blu">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div class="op-label">Nuovo Ordine</div>
+    </div>
     <div class="op-btn" onclick="showPage('page-ordini')">
       <div class="op-icon blu">
         <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -364,12 +365,7 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Nuovo Carico</h2>
-    <button onclick="aproCaricoMultiploOrdineCorrente()"
-      title="Registra tutti i prodotti dell'ordine in una volta"
-      style="margin-left:auto;padding:7px 12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="2" rx="1" fill="#fff"/><rect x="1" y="7" width="8" height="2" rx="1" fill="#fff"/><rect x="1" y="11" width="10" height="2" rx="1" fill="#fff"/></svg>
-      Carico Multiplo
-    </button>
+    <span class="form-badge badge-carico">CARICO</span>
   </div>
 
   <div class="form-section">
@@ -621,16 +617,10 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <h2>Ordini</h2>
-    <button onclick="showPage('page-nuovo-ordine')"
-      style="margin-left:auto;padding:8px 14px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
-      Nuovo Ordine
-    </button>
   </div>
   <div class="search-wrap" style="margin-bottom:8px;">
     <svg class="search-icon" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    <input type="text" id="ordSearch" list="list-ord-search" oninput="renderOrdini()" style="padding-left:38px;" placeholder="Cerca ordine o articolo..." autocomplete="off">
-    <datalist id="list-ord-search"></datalist>
+    <input type="text" id="ordSearch" oninput="renderOrdini()" style="padding-left:38px;" placeholder="Cerca ordine...">
   </div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="filterOrdini(this,'ALL')">Tutti</div>
@@ -716,26 +706,21 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- PAGE: NUOVO ORDINE MULTIPLO            -->
-<!-- ════════════════════════════════════════ -->
-<div class="page page-content" id="page-nuovo-ordine">
-  <div class="form-header">
-    <div class="back-btn" onclick="showPage('page-home')">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PAGINA: NUOVO ORDINE MULTIPLO                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-nuovo-ordine">
+    <div class="form-header">
+      <div class="back-btn" onclick="showPage('page-home')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Nuovo Ordine</h2>
     </div>
-    <h2>Nuovo Ordine</h2>
-    <span class="form-badge badge-ordine">ORDINE</span>
-  </div>
 
-  <!-- Testata ordine -->
-  <div class="card" style="margin-bottom:12px;">
-    <div class="field">
-      <label>Laboratorio <span class="req">*</span></label>
-      <input type="text" id="no-lab" list="list-lab" autocomplete="off" placeholder="Seleziona laboratorio">
-      <datalist id="list-lab-no"></datalist>
-    </div>
-    <div class="field-row">
+    <!-- Testata ordine -->
+    <div class="card" style="margin-bottom:12px;">
       <div class="field">
         <label>N. Ordine <span class="req">*</span></label>
         <input type="number" id="no-nordine" placeholder="es. 74" min="1" autocomplete="off">
@@ -744,104 +729,99 @@
         <label>Anno <span class="req">*</span></label>
         <input type="number" id="no-anno" placeholder="es. 2025" min="2020" max="2099" value="" autocomplete="off">
       </div>
+      <div class="field" id="no-id-preview-wrap" style="display:none;">
+        <label>ID Ordine generato</label>
+        <div id="no-id-preview" style="font-weight:700;color:var(--primary);padding:8px 0;font-size:15px;"></div>
+      </div>
+      <div class="field">
+        <label>Fornitore <span class="req">*</span></label>
+        <input type="text" id="no-fornitore" list="list-fornitori" placeholder="Cerca fornitore..." autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Data Ordine</label>
+        <input type="date" id="no-data-ord">
+      </div>
+      <div class="field">
+        <label>Laboratorio</label>
+        <input type="text" id="no-lab" list="list-lab" autocomplete="off">
+      </div>
     </div>
-    <div class="field" id="no-id-preview-wrap" style="display:none;">
-      <label>ID Ordine generato</label>
-      <div id="no-id-preview" style="font-weight:700;color:var(--primary);padding:8px 0;font-size:15px;"></div>
+
+    <!-- Lista prodotti temporanea -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="margin:0;font-size:15px;">Prodotti</h3>
+      <button class="btn-add-row" onclick="noAggiungiRiga()">+ Aggiungi</button>
     </div>
-    <div class="field">
-      <label>Fornitore <span class="req">*</span></label>
-      <input type="text" id="no-fornitore" list="list-fornitori" placeholder="Cerca o scrivi fornitore..." autocomplete="off">
-      <datalist id="list-fornitori"></datalist>
+    <div id="no-righe-wrap"></div>
+
+    <!-- Barra progresso -->
+    <div id="no-progress" style="display:none;margin:12px 0;">
+      <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
+        <div id="no-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
+      </div>
+      <div id="no-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
     </div>
-    <div class="field">
-      <label>Data Ordine</label>
-      <input type="date" id="no-data-ord">
-    </div>
+
+    <button class="submit-btn submit-carico" onclick="noInvia()" style="margin-top:16px;">
+      Invia Ordine
+    </button>
   </div>
 
-  <!-- Lista prodotti -->
-  <div style="display:flex;align-items:center;margin-bottom:8px;">
-    <h3 style="margin:0;font-size:15px;">Prodotti</h3>
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PAGINA: CARICO MULTIPLO DA ORDINE                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="page" id="page-carico-multiplo">
+    <div class="form-header">
+      <div class="back-btn" onclick="showPage('page-ordini')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Carico Multiplo</h2>
+    </div>
+    <div id="cm-ordine-info" class="card" style="margin-bottom:12px;font-size:14px;"></div>
+
+    <!-- Dati comuni del carico -->
+    <div class="card" style="margin-bottom:12px;">
+      <div class="field">
+        <label>Tecnico <span class="req">*</span></label>
+        <input type="text" id="cm-tecnico" list="list-tecnici" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Data Carico</label>
+        <input type="date" id="cm-data">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
+        <input type="text" id="cm-colloc-all" list="list-colloc"
+               placeholder="Collocazione comune..." autocomplete="off"
+               style="flex:1;">
+        <button onclick="cmApplicaCollocazione()" style="white-space:nowrap;padding:8px 12px;background:var(--primary-soft);color:var(--primary);border:none;border-radius:8px;font-size:13px;cursor:pointer;">
+          Applica a tutti
+        </button>
+      </div>
+    </div>
+
+    <!-- Schede prodotti dell'ordine -->
+    <div id="cm-righe-wrap"></div>
+
+    <!-- Barra progresso -->
+    <div id="cm-progress" style="display:none;margin:12px 0;">
+      <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
+        <div id="cm-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
+      </div>
+      <div id="cm-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
+    </div>
+
+    <button class="submit-btn submit-carico" onclick="cmInvia()" style="margin-top:16px;">
+      Registra Carichi
+    </button>
   </div>
-  <datalist id="list-no-art"></datalist>
+
+
+</div>
+  <!-- Datalist globali per autocomplete -->
   <datalist id="list-ana-cb"></datalist>
   <datalist id="list-ana-is"></datalist>
   <datalist id="list-lab"></datalist>
-  <div id="no-righe-wrap"></div>
-  <button class="btn-add-row" onclick="noAggiungiRiga()" style="width:100%;padding:11px;margin-top:8px;border-radius:10px;font-size:14px;">
-    + Aggiungi Prodotto
-  </button>
-
-  <!-- Barra progresso -->
-  <div id="no-progress" style="display:none;margin:12px 0;">
-    <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
-      <div id="no-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
-    </div>
-    <div id="no-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
-  </div>
-
-  <button class="submit-btn submit-ordine" onclick="noInvia()" style="margin-top:16px;">
-    Invia Ordine
-  </button>
-</div>
-
-<!-- ════════════════════════════════════════ -->
-<!-- PAGE: CARICO MULTIPLO DA ORDINE        -->
-<!-- ════════════════════════════════════════ -->
-<div class="page page-content" id="page-carico-multiplo">
-  <div class="form-header">
-    <div class="back-btn" onclick="showPage('page-ordini')">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="var(--txt)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </div>
-    <h2>Carico Multiplo</h2>
-    <span class="form-badge badge-carico">CARICO</span>
-  </div>
-  <div id="cm-ordine-info" class="card" style="margin-bottom:12px;font-size:14px;"></div>
-
-  <!-- Dati comuni del carico -->
-  <div class="card" style="margin-bottom:12px;">
-    <div class="field">
-      <label>Laboratorio <span class="req">*</span></label>
-      <input type="text" id="cm-lab" list="list-lab-cm" autocomplete="off">
-      <datalist id="list-lab-cm"></datalist>
-    </div>
-    <div class="field">
-      <label>Tecnico <span class="req">*</span></label>
-      <input type="text" id="cm-tecnico" list="list-tecnici" autocomplete="off">
-    </div>
-    <div class="field">
-      <label>Data Carico</label>
-      <input type="date" id="cm-data">
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;margin-top:4px;">
-      <input type="text" id="cm-colloc-all" list="list-colloc"
-             placeholder="Collocazione comune..." autocomplete="off"
-             style="flex:1;">
-      <button onclick="cmApplicaCollocazione()" style="white-space:nowrap;padding:8px 12px;background:var(--primary-soft);color:var(--primary);border:none;border-radius:8px;font-size:13px;cursor:pointer;">
-        Applica a tutti
-      </button>
-    </div>
-  </div>
-
-  <!-- Schede prodotti dell'ordine -->
-  <div id="cm-righe-wrap"></div>
-
-  <!-- Barra progresso -->
-  <div id="cm-progress" style="display:none;margin:12px 0;">
-    <div style="background:#e2e8f0;border-radius:8px;height:6px;overflow:hidden;">
-      <div id="cm-progress-bar" style="height:6px;background:var(--primary);width:0%;transition:width .3s;border-radius:8px;"></div>
-    </div>
-    <div id="cm-progress-txt" style="text-align:center;margin-top:6px;font-size:13px;color:var(--txt2);">Invio in corso...</div>
-  </div>
-
-  <button class="submit-btn submit-carico" onclick="cmInvia()" style="margin-top:16px;">
-    Registra Carichi
-  </button>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
+  <datalist id="list-fornitori"></datalist>
 
 <script>
 // ── CACHE ANAGRAFICA IN-MEMORY ────────────────────────────
@@ -852,19 +832,30 @@ async function _loadAnagrafica(sede) {
   if (!sede) return;
   var ora = Date.now();
   // Ricarica solo se cache vuota o più vecchia di 10 minuti
-  if (_cacheAna[sede] && (ora - (_cacheAnaTs[sede]||0)) < 600000) return;
+  if (_cacheAna[sede] && (_cacheAna[sede].length > 0) &&
+      (ora - (_cacheAnaTs[sede]||0)) < 600000) return;
   try {
     var d = await apiCall({action:'anagrafica', sede:sede});
-    if (d && d.ok && d.dati) {
+    if (d && d.ok && d.dati && d.dati.length > 0) {
       _cacheAna[sede]   = d.dati;
       _cacheAnaTs[sede] = Date.now();
-      // Popola la datalist globale per-sede: la freccia ▾ appare subito
-      var _dl = document.getElementById('list-ana-' + sede.toLowerCase());
-      if (_dl) _dl.innerHTML = d.dati.map(function(x){
-        return '<option value="' + x.codice + '">';
-      }).join('');
+      _popolaDatalistAna(sede);
     }
   } catch(e) { console.warn('_loadAnagrafica:', e); }
+}
+
+// Popola le datalist globali list-ana-cb / list-ana-is
+// Chiamata dopo ogni caricamento anagrafica
+function _popolaDatalistAna(sede) {
+  var lista = _cacheAna[sede] || [];
+  if (!lista.length) return;
+  var dlId = 'list-ana-' + sede.toLowerCase();
+  var dl   = document.getElementById(dlId);
+  if (!dl) return;
+  // Scrive TUTTE le opzioni senza limite (il filtro avviene dopo)
+  dl.innerHTML = lista.map(function(x){
+    return '<option value="' + x.codice + '"></option>';
+  }).join('');
 }
 
 // Restituisce array di codici filtrati per testo (min 1 char)
@@ -888,14 +879,24 @@ function _getAnaItem(sede, codice) {
 
 // Aggiorna datalist con i codici filtrati
 function _aggiornaSuggerimenti(inputEl, sede) {
-  var dlId = inputEl.getAttribute('list');
-  if (!dlId) return;
+  // Usa la datalist globale per sede (list-ana-cb / list-ana-is)
+  var dlId = 'list-ana-' + (sede || 'cb').toLowerCase();
+  // Ricollega l'input alla datalist globale se necessario
+  if (inputEl.getAttribute('list') !== dlId) {
+    inputEl.setAttribute('list', dlId);
+  }
+  var testo = (inputEl.value || '').trim();
   var dl = document.getElementById(dlId);
   if (!dl) return;
-  var matches = _filtraAna(sede, inputEl.value);
-  // Massimo 50 suggerimenti per non appesantire il DOM
-  dl.innerHTML = matches.slice(0,50).map(function(c){
-    return '<option value="'+c+'"></option>';
+  if (!testo) {
+    // Senza testo: mostra TUTTA l'anagrafica (già caricata)
+    // La datalist è già piena da _popolaDatalistAna - non riscrivere
+    return;
+  }
+  // Con testo: filtra e aggiorna la datalist
+  var matches = _filtraAna(sede, testo);
+  dl.innerHTML = matches.map(function(c){
+    return '<option value="' + c + '"></option>';
   }).join('');
 }
 
@@ -910,10 +911,11 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   var annoEl = document.getElementById('no-anno');
   if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
-  // Precarica anagrafica subito così l'autocomplete è pronto
-  _loadAnagrafica(currentSede).catch(function(){});
 });
 function _initAutocomplete() {
+  // I campi articolo dei form principali vengono collegati alla
+  // datalist globale (list-ana-cb / list-ana-is) che viene
+  // popolata da _loadAnagrafica all'avvio
   var campi = [
     {id:'car-articolo', onSel: onArticoloSelezionato},
     {id:'ape-articolo', onSel: onArticoloAperturaSelezionato},
@@ -922,17 +924,20 @@ function _initAutocomplete() {
   campi.forEach(function(cfg) {
     var el = document.getElementById(cfg.id);
     if (!el) return;
-    // Assicura che abbia un datalist dedicato
-    var dlId = el.getAttribute('list') || (cfg.id + '-dl');
-    el.setAttribute('list', dlId);
-    if (!document.getElementById(dlId)) {
-      var dl = document.createElement('datalist');
-      dl.id = dlId;
-      el.parentNode.insertBefore(dl, el.nextSibling);
-    }
+    // Collega alla datalist globale per sede corrente
+    // (viene aggiornata dinamicamente in _aggiornaSuggerimenti)
     el.addEventListener('input', function() {
       _aggiornaSuggerimenti(el, currentSede);
     });
+    el.addEventListener('focus', (function(campo) { return function() {
+      // Al focus: assicura che la datalist sia piena
+      var s = currentSede;
+      if (s && (!_cacheAna[s] || !_cacheAna[s].length)) {
+        _loadAnagrafica(s).then(function(){ _popolaDatalistAna(s); }).catch(function(){});
+      } else if (s) {
+        _popolaDatalistAna(s);
+      }
+    }; })(el));
     el.addEventListener('change', function() {
       if (cfg.onSel) cfg.onSel();
     });
@@ -958,35 +963,19 @@ function _noAggiornaPreview() {
   }
 }
 
-// Popola il datalist condiviso articoli (list-no-art) dalla cache anagrafica
-function _noRefreshArtDl() {
-  var dl = document.getElementById('list-no-art');
-  if (!dl) return;
-  var lista = _cacheAna[currentSede] || [];
-  dl.innerHTML = lista.map(function(x){
-    return '<option value="' + x.codice + '">';
-  }).join('');
-}
-
-// Freccia dropdown articolo: mostra tutti i prodotti e porta il focus
-function _noArtArrow(btn) {
-  var inp = btn.parentNode.querySelector('.no-art-input');
-  if (!inp) return;
-  // Azzera il filtro → la datalist mostra tutti gli articoli
-  _aggiornaSuggerimenti(inp, currentSede);
-  inp.focus();
-}
-
 // Aggiunge una scheda prodotto alla lista ordine
 function noAggiungiRiga(precompila) {
   var idx   = _noRigheCount++;
   var wrap  = document.getElementById('no-righe-wrap');
+  var dlId  = 'no-art-dl-' + idx;
   var div   = document.createElement('div');
   div.className  = 'no-riga card';
   div.dataset.idx= idx;
   div.style.cssText = 'margin-bottom:10px;position:relative;';
   var artVal = (precompila && precompila.codice) ? precompila.codice : '';
   var qtaVal = (precompila && precompila.qta)    ? precompila.qta    : '';
+  // Usa la datalist globale per sede (già popolata da _loadAnagrafica)
+  var dlGlobal = 'list-ana-' + (currentSede || 'CB').toLowerCase();
   div.innerHTML = [
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
     '  <span style="font-size:13px;color:var(--txt2);font-weight:600;">Prodotto #'+(idx+1)+'</span>',
@@ -995,11 +984,10 @@ function noAggiungiRiga(precompila) {
     '</div>',
     '<div class="field">',
     '  <label>Articolo <span class="req">*</span></label>',
-    '  <input type="text" class="no-art-input"',
-    '    list="list-ana-' + currentSede.toLowerCase() + '"',
+    '  <input type="text" class="no-art-input" list="'+dlGlobal+'"',
     '    placeholder="Cerca o scrivi articolo..."',
-    '    value="'+artVal+'" autocomplete="off"',
-    '    onchange="_noOnArtChange(this)">',
+    '    value="'+artVal+'" autocomplete="off" name="no-art-'+idx+'"',
+    '    oninput="_noFiltroArt(this)" onchange="_noOnArtChange(this)">',
     '</div>',
     '<div class="field">',
     '  <label>Quantità <span class="req">*</span></label>',
@@ -1008,31 +996,39 @@ function noAggiungiRiga(precompila) {
     '</div>',
   ].join('');
   wrap.appendChild(div);
+  // Popola datalist con tutta l'anagrafica al primo focus
+  var artInput = div.querySelector('.no-art-input');
+  // Al focus mostra tutti i prodotti nella datalist globale
+  artInput.addEventListener('focus', function() {
+    _aggiornaSuggerimenti(artInput, currentSede);
+  });
+  // Click sulla freccia forza apertura del dropdown
 
-  // Collega focus+input sul campo articolo della riga appena creata
-  var artInp = div.querySelector('.no-art-input');
-  if (artInp) {
-    // Al focus: popola subito la datalist con tutti gli articoli
-    artInp.addEventListener('focus', function() {
-      _aggiornaSuggerimenti(this, currentSede);
-    });
-    // Mentre si digita: filtra la lista in tempo reale
-    artInp.addEventListener('input', function() {
-      _aggiornaSuggerimenti(this, currentSede);
-    });
-  }
 }
 
 function noRimuoviRiga(btn) {
   btn.closest('.no-riga').remove();
 }
 
+function _noFiltroArt(input) {
+  _aggiornaSuggerimenti(input, currentSede);
+}
+
+function _noApriDropdown(arrowSpan) {
+  // Click sulla freccia: svuota il filtro e mostra tutti i prodotti
+  var input = arrowSpan.previousElementSibling;
+  if (!input) return;
+  input.value = '';
+  _aggiornaSuggerimenti(input, currentSede);
+  input.focus();
+  // Simula click per aprire il dropdown del browser
+  try { input.click(); } catch(e) {}
+}
+
 function _noOnArtChange(input) {
+  // Verifica che l'articolo esista nell'anagrafica
   var val = input.value.trim().toUpperCase();
   if (!val) return;
-  // Se la cache non è ancora caricata non bloccare: il backend validerà
-  var cacheLoaded = _cacheAna[currentSede] && _cacheAna[currentSede].length > 0;
-  if (!cacheLoaded) { input.style.borderColor = ''; input.title = ''; return; }
   var item = _getAnaItem(currentSede, val);
   if (!item) {
     input.style.borderColor = '#ef4444';
@@ -1064,14 +1060,16 @@ async function noInvia() {
     var qta = parseFloat((divs[i].querySelector('.no-qta-input').value||'0').replace(',','.')) || 0;
     if (!art) { toast('Prodotto #'+(i+1)+': articolo mancante', 'warning'); return; }
     if (qta<=0){ toast('Prodotto '+art+': quantità non valida', 'warning'); return; }
+    // Verifica anagrafica solo se cache disponibile
+    if (_cacheAna[currentSede] && _cacheAna[currentSede].length > 0) {
+      if (!_getAnaItem(currentSede, art)) {
+        toast('Articolo "'+art+'" non trovato in anagrafica. Verifica il codice.', 'warning');
+        return;
+      }
+    }
     righe.push({art:art, qta:qta});
   }
   if (!righe.length) { toast('Aggiungi almeno un prodotto', 'warning'); return; }
-
-  // Anti doppio-invio
-  var btnNo = document.querySelector('#page-nuovo-ordine .submit-btn');
-  if (btnNo && btnNo.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
-  if (btnNo) { btnNo.disabled = true; btnNo.style.opacity = '0.6'; }
 
   // Mostra progresso
   var prog    = document.getElementById('no-progress');
@@ -1093,19 +1091,25 @@ async function noInvia() {
   };
 
   progBar.style.width = '50%';
-  var d = await apiCall(params, 60000);
+  // Usa POST per evitare troncamento URL con prodotti multipli
+  var d = await apiPost(params, 60000);
   progBar.style.width = '100%';
-
-  if (btnNo) { btnNo.disabled = false; btnNo.style.opacity = '1'; }
 
   if (!d || !d.ok) {
     prog.style.display = 'none';
-    toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
+    var errMsg = (d && d.errore) ? d.errore : 'Nessuna risposta dal server';
+    toast('❌ ' + errMsg, 'error');
+    console.error('noInvia errore:', errMsg);
     return;
   }
 
   prog.style.display = 'none';
-  toast('✅ ' + d.messaggio, 'success');
+  var msg = '✅ ' + d.messaggio;
+  if (d.righeSkippate && d.righeSkippate.length)
+    msg += ' | ⚠ già presenti: ' + d.righeSkippate.join(', ');
+  if (d.errori && d.errori.length)
+    msg += ' | ⚠ ' + d.errori.length + ' ignorati';
+  toast(msg, 'success');
 
   // Svuota form
   document.getElementById('no-nordine').value  = '';
@@ -1127,43 +1131,26 @@ async function noInvia() {
 
 var _cmOrdineCorrente = null; // dati ordine selezionato
 
-// Chiamata dal tasto "Carico Multiplo" dentro la scheda Carico singolo.
-// Se c'è un ordine già selezionato lo usa direttamente, altrimenti manda alla lista ordini.
-function aproCaricoMultiploOrdineCorrente() {
-  var ordine = (document.getElementById('car-ordine').value || '').trim();
-  if (ordine) {
-    apriCaricoMultiplo(ordine);
-  } else {
-    toast('Seleziona prima un ordine, oppure sceglilo dalla lista Ordini', 'info');
-    showPage('page-ordini');
-  }
-}
-
 // Apre la pagina carico multiplo per un ordine
-async function apriCaricoMultiplo(idOrdine, articoliPreSel) {
+async function apriCaricoMultiplo(idOrdine) {
   _cmOrdineCorrente = null;
   document.getElementById('cm-righe-wrap').innerHTML =
     '<div style="text-align:center;padding:20px;color:var(--txt2);">Caricamento...</div>';
   document.getElementById('cm-ordine-info').innerHTML = '';
-  document.getElementById('cm-lab').value      = '';
   document.getElementById('cm-tecnico').value  = '';
   document.getElementById('cm-colloc-all').value= '';
   document.getElementById('cm-data').value     = new Date().toISOString().slice(0,10);
   document.getElementById('cm-progress').style.display = 'none';
-  // Popola datalist laboratori e tecnici per il form CM
-  _loadDatalist('list-lab-cm',  {action:'laboratori'}, _LAB_FALLBACK);
-  _loadDatalist('list-tecnici', {action:'tecnici'},    _TEC_FALLBACK);
-  _loadDatalist('list-colloc',  {action:'collocazioni'}, _COLLOC_FALLBACK);
   showPage('page-carico-multiplo');
 
-  // Recupera dati freschi dell'ordine (sempre API, per avere rimanente aggiornato)
+  // Carica dati ordine
   var d = await apiCall({action:'ordini', sede:currentSede});
   if (!d || !d.ok) {
     document.getElementById('cm-righe-wrap').innerHTML =
       '<div style="color:#ef4444;padding:12px;">Errore caricamento ordini</div>';
     return;
   }
-  if (d.dati) _dataOrdini = d.dati; // aggiorna la cache
+
   var ordine = (d.dati||[]).find(function(o){
     return o.id.toUpperCase() === idOrdine.toUpperCase();
   });
@@ -1181,56 +1168,30 @@ async function apriCaricoMultiplo(idOrdine, articoliPreSel) {
     (fornitore ? ' — ' + fornitore : '') +
     ' <span style="color:var(--txt2);font-size:13px;">(' + ordine.stato + ')</span>';
 
-  // Assicura cache anagrafica caricata (serve per tracc/udm di ogni prodotto)
-  await _loadAnagrafica(currentSede);
-  // Costruisce schede prodotti (con eventuale pre-selezione articoli)
-  _cmBuildRighe(ordine, articoliPreSel);
+  // Costruisce schede prodotti
+  _cmBuildRighe(ordine);
 }
 
-function _cmBuildRighe(ordine, articoliPreSel) {
+function _cmBuildRighe(ordine) {
   var wrap = document.getElementById('cm-righe-wrap');
   wrap.innerHTML = '';
   var prodotti = ordine.prodotti || [];
   if (!prodotti.length) {
-    wrap.innerHTML = '<div style="padding:12px;color:var(--txt2);">Nessun prodotto registrato per questo ordine.</div>';
+    wrap.innerHTML = '<div style="padding:12px;color:var(--txt2);">Nessun prodotto in questo ordine</div>';
     return;
-  }
-  // Se arrivo dal modale con selezione, mostro il banner di contesto
-  if (articoliPreSel && articoliPreSel.length) {
-    var nomiSel = articoliPreSel.join(', ');
-    wrap.innerHTML += '<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#1d4ed8;">'
-      + '&#128197; Articoli pre-selezionati: <b>' + nomiSel + '</b></div>';
-  }
-  // Avvisa se l'ordine è già completamente caricato
-  var tuttiEvasi = prodotti.every(function(p){ return (parseFloat(p.rimanente)||0) <= 0; });
-  if (tuttiEvasi) {
-    wrap.innerHTML += '<div style="background:#fef9c3;border:1px solid #fbbf24;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#92400e;">'
-      + '&#9888; Ordine già completamente caricato. Puoi includere manualmente una riga per correggere.</div>';
-  }
-
-  // Costruisce la mappa di selezione: se articoliPreSel è fornita, spunta solo quelli
-  var preSelMap = null;
-  if (articoliPreSel && articoliPreSel.length) {
-    preSelMap = {};
-    articoliPreSel.forEach(function(a){ preSelMap[a.toUpperCase()] = true; });
   }
 
   prodotti.forEach(function(pr, idx) {
     var rim = parseFloat(pr.rimanente) || 0;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
-    var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
+    var tracc = ana.tracc || 'NO'; // default NO se non noto
+    // Cerca tracc dalla cache giacenze (sarà NO o SI)
+    // default: se ha lotto nell'ordine -> SI, altrimenti NO
     var div = document.createElement('div');
     div.className = 'cm-riga card';
     div.dataset.idx = idx;
     div.dataset.art = pr.articolo;
-    div.style.cssText = 'margin-bottom:12px;';
-
-    // Determina se spuntare la checkbox:
-    // - Se c'è una pre-selezione: spunta solo quelli in lista
-    // - Altrimenti: spunta quelli con rimanente>0 (comportamento default)
-    var checked = preSelMap
-      ? (preSelMap[pr.articolo.toUpperCase()] === true)
-      : (rim > 0);
+    div.style.cssText = 'margin-bottom:12px;opacity:' + (rim<=0?'0.5':'1') + ';';
 
     var badge = rim > 0
       ? '<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">da caricare: '+rim+'</span>'
@@ -1243,12 +1204,11 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       badge,
       '  </div>',
       '  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">',
-      '    <input type="checkbox" class="cm-includi" '+(checked?'checked':'')+'',
+      '    <input type="checkbox" class="cm-includi" '+(rim>0?'checked':'')+'',
       '      onchange="_cmToggleRiga(this)"> includi',
       '  </label>',
       '</div>',
-      // Mostra i campi se checkbox è spuntata (pre-selezionato o rimanente>0)
-      '<div class="cm-fields" style="'+(checked?'':'display:none')+'">',
+      '<div class="cm-fields" style="'+(rim<=0?'display:none':'')+'">',
       '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
       '    <div class="field" style="margin:0;">',
       '      <label style="font-size:12px;">Quantità</label>',
@@ -1257,12 +1217,12 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       '    <div class="field" style="margin:0;">',
       '      <label style="font-size:12px;">Tracciabilità</label>',
       '      <select class="cm-tracc" onchange="_cmToggleTracc(this)">',
-      '        <option value="NO"' + (tracc !== 'SI' ? ' selected' : '') + '>NO</option>',
-      '        <option value="SI"' + (tracc === 'SI' ? ' selected' : '') + '>SI</option>',
+      '        <option value="NO">NO</option>',
+      '        <option value="SI">SI</option>',
       '      </select>',
       '    </div>',
       '  </div>',
-      '  <div class="cm-lotto-wrap" style="display:' + (tracc === 'SI' ? '' : 'none') + ';">',
+      '  <div class="cm-lotto-wrap" style="display:none;">',
       '    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
       '      <div class="field" style="margin:0;">',
       '        <label style="font-size:12px;">Lotto</label>',
@@ -1311,11 +1271,9 @@ function cmApplicaCollocazione() {
 }
 
 async function cmInvia() {
-  var lab      = (document.getElementById('cm-lab').value||'').trim();
   var tecnico  = (document.getElementById('cm-tecnico').value||'').trim();
   var dataVal  = document.getElementById('cm-data').value;
 
-  if (!lab)    { toast('Inserisci il laboratorio', 'warning'); return; }
   if (!tecnico) { toast('Inserisci il tecnico', 'warning'); return; }
   if (!_cmOrdineCorrente) { toast('Nessun ordine selezionato', 'error'); return; }
 
@@ -1349,11 +1307,6 @@ async function cmInvia() {
   }
   if (!righe.length) { toast('Nessuna riga inclusa', 'warning'); return; }
 
-  // Anti doppio-invio
-  var btnCm = document.querySelector('#page-carico-multiplo .submit-btn');
-  if (btnCm && btnCm.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
-  if (btnCm) { btnCm.disabled = true; btnCm.style.opacity = '0.6'; }
-
   // Progresso
   var prog    = document.getElementById('cm-progress');
   var progBar = document.getElementById('cm-progress-bar');
@@ -1366,7 +1319,7 @@ async function cmInvia() {
   var params = {
     action:  'carico_multiplo',
     sede:    currentSede,
-    lab:     lab,
+    lab:     (document.getElementById('cm-tecnico').value||'').trim(),
     tecnico: tecnico,
     ordine:  _cmOrdineCorrente.id,
     data:    dataVal ? _isoToIta(dataVal) : '',
@@ -1375,10 +1328,10 @@ async function cmInvia() {
   };
 
   progBar.style.width = '40%';
-  var d = await apiCall(params, 120000);
+  // Usa POST per evitare troncamento URL con righe multiple
+  var d = await apiPost(params, 120000);
   progBar.style.width = '100%';
   prog.style.display  = 'none';
-  if (btnCm) { btnCm.disabled = false; btnCm.style.opacity = '1'; }
 
   if (!d || !d.ok) {
     toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
@@ -1413,9 +1366,6 @@ var _dataOrdini   = [];
 var _dataRegistro = [];
 var _dataGiacenze = [];
 
-var _cacheAna   = {};   // { sede: [ {codice, descrizione, ...} ] }
-var _cacheAnaTs = {};   // { sede: timestamp ultimo caricamento }
-
 // ── NAVIGAZIONE ──────────────────────────────────────────────
 // ── DATE UTILS ────────────────────────────────────────────────
 // input type="date" restituisce YYYY-MM-DD; il foglio usa dd/mm/yyyy
@@ -1434,6 +1384,11 @@ function _itaToIso(ita) {
 
 
 function showPage(id) {
+  // Forza caricamento anagrafica quando si apre il form nuovo ordine
+  // (può essere chiamata prima che setSede abbia finito)
+  if (id === 'page-nuovo-ordine' || id === 'page-carico-multiplo') {
+    if (currentSede) _loadAnagrafica(currentSede).catch(function(){});
+  }
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
@@ -1453,31 +1408,6 @@ function showPage(id) {
     _loadSelect('sca-lab', {action:'laboratori', sede:currentSede}, _LAB_FALLBACK);
     _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
     _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
-  } else if (id === 'page-nuovo-ordine') {
-    _loadDatalist('list-lab', {action:'laboratori'}, _LAB_FALLBACK);
-    // Data ordine: precompila con oggi se vuota
-    var dateEl = document.getElementById('no-data-ord');
-    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
-    // Anno: precompila con anno corrente se vuoto
-    var annoEl = document.getElementById('no-anno');
-    if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
-    // Fornitori: popola datalist dai dati ordini già caricati
-    var dlForn = document.getElementById('list-fornitori');
-    if (dlForn) {
-      var fornSet = {};
-      (_dataOrdini || []).forEach(function(o) {
-        (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSet[p.fornitore] = true; });
-        if (o.fornitore) fornSet[o.fornitore] = true;
-      });
-      var fornLista = Object.keys(fornSet).sort();
-      if (fornLista.length) dlForn.innerHTML = fornLista.map(function(v){ return '<option value="'+v+'">'; }).join('');
-    }
-    // Popola datalist articoli condiviso (come list-fornitori)
-    _noRefreshArtDl();
-    // Se la cache è vuota la ricarica e poi aggiorna il datalist
-    _loadAnagrafica(currentSede).then(_noRefreshArtDl).catch(function(){});
-    // Aggiunge una riga prodotto se la lista è vuota
-    if (!document.getElementById('no-righe-wrap').children.length) noAggiungiRiga();
   }
 }
 
@@ -1525,10 +1455,6 @@ function riapreDatelist(el) {
 async function _loadDatalist(listId, params, fallbackDati) {
   var dl = document.getElementById(listId);
   if (!dl) return;
-  // Mostra subito il fallback così i dropdown sono usabili senza attendere l'API
-  if (fallbackDati && fallbackDati.length) {
-    dl.innerHTML = fallbackDati.map(function(v) { return '<option value="' + v + '">'; }).join('');
-  }
   var d    = await apiCall(params);
   var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : (fallbackDati || []);
   dl.innerHTML = dati.map(function(v) { return '<option value="' + v + '">'; }).join('');
@@ -1579,10 +1505,21 @@ var _COLLOC_FALLBACK = [
 
 // ── SEDE ────────────────────────────────────────────────────
 async function setSede(s) {
-  // Precarica anagrafica, laboratori e collocazioni per la nuova sede
+  // Precarica anagrafica in-memory per autocomplete istantaneo
   _loadAnagrafica(s).catch(function(){});
-  _loadDatalist('list-lab',    {action:'laboratori'},   _LAB_FALLBACK);
-  _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
+  // Carica lab e fornitori nelle datalist
+  apiCall({action:'laboratori', sede:s}).then(function(d){
+    if(d&&d.ok&&d.dati){
+      var dl=document.getElementById('list-lab');
+      if(dl) dl.innerHTML=d.dati.map(function(v){return '<option value="'+v+'"></option>';}).join('');
+    }
+  }).catch(function(){});
+  apiCall({action:'collocazioni'}).then(function(d){
+    if(d&&d.ok&&d.dati){
+      var dl=document.getElementById('list-colloc');
+      if(dl) dl.innerHTML=d.dati.map(function(v){return '<option value="'+v+'"></option>';}).join('');
+    }
+  }).catch(function(){});
   if (s === currentSede) return;
   var ov  = document.getElementById('overlayWait');
   var ovP = document.querySelector('#overlayWait p');
@@ -1596,7 +1533,6 @@ async function setSede(s) {
   _clearLottiScarico();
 
   currentSede = s;
-  _dataOrdini = []; // svuota cache ordini — la nuova sede la ricarica subito
   document.getElementById('btnCB').classList.toggle('active', s === 'CB');
   document.getElementById('btnIS').classList.toggle('active', s === 'IS');
   document.getElementById('userBadge').textContent = s;
@@ -1691,6 +1627,40 @@ async function apiCall(params, timeoutMs) {
   }
 }
 
+// ── API POST (per payload grandi: prodotti[], righe[]) ───────
+// Invia i parametri nel body come JSON invece che nell'URL GET.
+// Evita il limite ~2000 chars degli URL e il troncamento dei JSON.
+async function apiPost(params, timeoutMs) {
+  if (!BASE_URL || BASE_URL === 'INSERISCI_NUOVO_URL_GAS') {
+    return {ok: false, errore: 'URL API non configurato.'};
+  }
+  // Il token va nell'URL (GAS lo legge da e.parameter anche in POST)
+  var url  = BASE_URL + '?token=' + TOKEN;
+  var ms   = timeoutMs || 60000;
+  var ctrl = new AbortController();
+  var tid  = setTimeout(function() { ctrl.abort(); }, ms);
+  try {
+    var res  = await fetch(url, {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify(params),
+      signal:  ctrl.signal,
+    });
+    var text = await res.text();
+    if (text.trim().startsWith('<'))
+      return {ok:false, errore:'API non raggiungibile. Verifica deployment GAS.'};
+    return JSON.parse(text);
+  } catch(e) {
+    if (e.name === 'AbortError')
+      return {ok:false, errore:'Timeout ('+Math.round(ms/1000)+'s). Riprova.'};
+    if (e instanceof SyntaxError)
+      return {ok:false, errore:'Risposta API non valida.'};
+    return {ok:false, errore:'Errore connessione: '+e.message};
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
 // Retrocompatibilità: api(params, cb) → chiama apiCall e passa il risultato al callback
 // Usata internamente; le nuove funzioni usano apiCall direttamente.
 function api(params, cb) {
@@ -1758,33 +1728,13 @@ function filterOrdini(el, stato) {
 function renderOrdini() {
   var list = document.getElementById('ordiniList');
   var search = ((document.getElementById('ordSearch')||{}).value||'').toLowerCase();
-  // Aggiorna datalist suggerimenti con ID ordine e articoli
-  var dlOrd = document.getElementById('list-ord-search');
-  if (dlOrd && _dataOrdini && _dataOrdini.length) {
-    var suggestions = {};
-    _dataOrdini.forEach(function(o) {
-      suggestions[o.id] = true;
-      (o.prodotti||[]).forEach(function(p){ if(p.articolo) suggestions[p.articolo] = true; });
-    });
-    dlOrd.innerHTML = Object.keys(suggestions).sort().map(function(v){
-      return '<option value="'+v+'">';
-    }).join('');
-  }
   var data = _dataOrdini.filter(function(o) {
     var statoOk = ordStatoFilter === 'ALL' || o.stato === ordStatoFilter;
     var txtOk = !search || o.id.toLowerCase().indexOf(search) !== -1 ||
       (o.prodotti||[]).some(function(p){ return p.articolo.toLowerCase().indexOf(search) !== -1; });
     return statoOk && txtOk;
   });
-  if (!data.length) {
-    list.innerHTML = '<div class="empty">' +
-      (search || ordStatoFilter !== 'ALL'
-        ? 'Nessun ordine trovato con i filtri selezionati'
-        : 'Nessun ordine presente.<br><br>' +
-          '<button onclick="showPage(\'page-nuovo-ordine\')" style="padding:10px 20px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">+ Crea il primo ordine</button>') +
-      '</div>';
-    return;
-  }
+  if (!data.length) { list.innerHTML = '<div class="empty">Nessun ordine trovato</div>'; return; }
   window._ordiniFiltered = data;
   list.innerHTML = data.map(function(o, idx) {
     var cls = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
@@ -1806,10 +1756,8 @@ function renderOrdini() {
 }
 
 // Event delegation per pulsanti Carica Multiplo
-// stopPropagation evita che il click raggiunga il card onclick (mostraDettaglioOrdine)
 document.addEventListener('click', function(e) {
   if (e.target && e.target.classList.contains('cm-open-btn')) {
-    e.stopPropagation();
     var id = e.target.getAttribute('data-id');
     if (id) apriCaricoMultiplo(id);
   }
@@ -1911,31 +1859,20 @@ function renderGiacenze() {
 }
 
 // ── FORM HELPERS ─────────────────────────────────────────────
-function _popolaOrdiniSelect(selId, dati) {
-  var sel = document.getElementById(selId);
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— seleziona ordine —</option>';
-  (dati || []).forEach(function(o) {
-    if (o.stato === 'EVASO') return;
-    var opt = document.createElement('option');
-    opt.value = o.id;
-    opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
-    sel.appendChild(opt);
-  });
-}
-
 async function loadOrdiniSelect(selId) {
-  // Usa _dataOrdini già in memoria — nessuna API call aggiuntiva
-  if (_dataOrdini && _dataOrdini.length) {
-    _popolaOrdiniSelect(selId, _dataOrdini);
-    return;
-  }
-  // Fallback: carica ordini se non ancora in cache
   var sel = document.getElementById(selId);
-  if (sel) sel.innerHTML = '<option value="">caricamento...</option>';
+  sel.innerHTML = '<option value="">caricamento...</option>';
   var d = await apiCall({action: 'ordini', sede: currentSede});
-  if (d && d.ok) _dataOrdini = d.dati || [];
-  _popolaOrdiniSelect(selId, _dataOrdini);
+  sel.innerHTML = '<option value="">— seleziona ordine —</option>';
+  if (d && d.ok) {
+    (d.dati || []).forEach(function(o) {
+      if (o.stato === 'EVASO') return; // v77: solo ordini da evadere
+      var opt = document.createElement('option');
+      opt.value = o.id;
+      opt.text  = o.id + (o.stato ? ' — ' + o.stato : '');
+      sel.appendChild(opt);
+    });
+  }
 }
 
 // Chiamata quando si seleziona un ordine nel form CARICO
@@ -2367,67 +2304,22 @@ function mostraDettaglio(html) {
 
 function mostraDettaglioOrdine(o) {
   var stato = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
-  var prods = (o.prodotti||[]).map(function(p, i) {
-    var qO  = parseFloat(p.qtaOrd)||0;
-    var qC  = parseFloat(p.qtaCar)||0;
-    var rim = Math.max(0, qO - qC);
-    var pct = qO > 0 ? Math.round(qC/qO*100) : 0;
-    var rimTxt = rim > 0
-      ? '<b style="color:var(--ros);">Rimanente: ' + rim + ' ' + (p.udm||'') + '</b>'
-      : '<span style="color:var(--grn);">&#10003; Evaso</span>';
+  var prods = (o.prodotti||[]).map(function(p) {
+    var qO=parseFloat(p.qtaOrd)||0, qC=parseFloat(p.qtaCar)||0;
+    var pct = qO>0 ? Math.round(qC/qO*100) : 0;
     return '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;">'
-      + '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">'
-      + '<input type="checkbox" class="od-art-chk" data-art="' + p.articolo + '"'
-      + (rim > 0 ? ' checked' : '')
-      + ' style="width:18px;height:18px;accent-color:var(--acc);flex-shrink:0;margin-top:2px;">'
-      + '<div style="flex:1;">'
       + '<div style="font-weight:600;font-size:13px;margin-bottom:4px;">' + p.articolo + '</div>'
-      + '<div style="font-size:12px;color:#64748b;">Ordinato: <b>' + qO + '</b> &mdash; Caricato: <b>' + qC + '</b></div>'
-      + '<div style="font-size:12px;margin-top:2px;">' + rimTxt + '</div>'
+      + '<div style="font-size:12px;color:#64748b;">Ordinato: ' + qO + ' &mdash; Caricato: ' + qC + '</div>'
       + '<div style="background:#e2e8f0;border-radius:4px;height:6px;margin-top:6px;">'
-      + '<div style="height:6px;border-radius:4px;background:var(--acc);width:' + pct + '%"></div></div>'
+      + '<div style="height:6px;border-radius:4px;background:#3b82f6;width:' + pct + '%"></div></div>'
       + (p.fornitore ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">Fornitore: ' + p.fornitore + '</div>' : '')
-      + '</div></label>'
       + '</div>';
   }).join('');
-  // Pulsanti azione (solo se ordine non evaso)
-  var azioni = '';
-  if (o.stato !== 'EVASO') {
-    azioni = '<div style="font-size:11px;color:var(--txt2);margin-top:12px;margin-bottom:6px;">&#9745; Seleziona gli articoli da caricare, poi scegli l\'operazione:</div>'
-      + '<div style="display:flex;gap:8px;margin-top:4px;">'
-      + '<button onclick="_apriCaricoConOrdine(\'' + o.id + '\')" '
-      + 'style="flex:1;padding:10px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">&#128230; Carico</button>'
-      + '<button onclick="_apriCMConSelezione(\'' + o.id + '\')" '
-      + 'style="flex:1;padding:10px;background:var(--grn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">&#128218; Carico Multiplo</button>'
-      + '</div>';
-  }
   mostraDettaglio(
     '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">' + o.id + '</div>'
     + '<span class="ord-stato ' + stato + '" style="margin-bottom:12px;display:inline-block;">' + (o.stato||'—') + '</span>'
     + '<div style="font-size:12px;color:#64748b;margin-bottom:12px;">Sede: ' + o.sede + '</div>'
-    + prods
-    + azioni);
-}
-
-// Raccoglie gli articoli selezionati nel modale e apre CM pre-filtrato
-function _apriCMConSelezione(idOrdine) {
-  var chks = document.querySelectorAll('#modalDettaglioContenuto .od-art-chk');
-  var selezionati = [];
-  chks.forEach(function(c) { if (c.checked) selezionati.push(c.dataset.art); });
-  document.getElementById('modalDettaglio').style.display = 'none';
-  apriCaricoMultiplo(idOrdine, selezionati.length ? selezionati : null);
-}
-
-// Apre il form Carico con l'ordine già selezionato
-function _apriCaricoConOrdine(id) {
-  document.getElementById('modalDettaglio').style.display = 'none';
-  showForm('carico');
-  // loadOrdiniSelect è già chiamata da showForm, ma non è awaited.
-  // Richiamiamo direttamente per pre-selezionare l'ordine al completamento.
-  loadOrdiniSelect('car-ordine').then(function() {
-    var sel = document.getElementById('car-ordine');
-    if (sel) { sel.value = id; onOrdineSelezionato(id); }
-  });
+    + prods);
 }
 
 function mostraDettaglioMovimento(m) {
