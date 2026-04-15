@@ -285,13 +285,6 @@
   </div>
 
   <div class="op-grid">
-    <div class="op-btn" onclick="showPage('page-nuovo-ordine')">
-      <div class="op-icon grn">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-      </div>
-      <span class="op-label">Nuovo Ordine</span>
-      <span class="op-desc">Crea ordine d'acquisto</span>
-    </div>
     <div class="op-btn" onclick="showPage('page-ordini')">
       <div class="op-icon blu">
         <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
@@ -737,12 +730,19 @@
   <!-- Testata ordine -->
   <div class="card" style="margin-bottom:12px;">
     <div class="field">
-      <label>N. Ordine <span class="req">*</span></label>
-      <input type="number" id="no-nordine" placeholder="es. 74" min="1" autocomplete="off">
+      <label>Laboratorio <span class="req">*</span></label>
+      <input type="text" id="no-lab" list="list-lab-no" autocomplete="off" placeholder="Seleziona laboratorio">
+      <datalist id="list-lab-no"></datalist>
     </div>
-    <div class="field">
-      <label>Anno <span class="req">*</span></label>
-      <input type="number" id="no-anno" placeholder="es. 2025" min="2020" max="2099" value="" autocomplete="off">
+    <div class="field-row">
+      <div class="field">
+        <label>N. Ordine <span class="req">*</span></label>
+        <input type="number" id="no-nordine" placeholder="es. 74" min="1" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Anno <span class="req">*</span></label>
+        <input type="number" id="no-anno" placeholder="es. 2025" min="2020" max="2099" value="" autocomplete="off">
+      </div>
     </div>
     <div class="field" id="no-id-preview-wrap" style="display:none;">
       <label>ID Ordine generato</label>
@@ -750,26 +750,23 @@
     </div>
     <div class="field">
       <label>Fornitore <span class="req">*</span></label>
-      <input type="text" id="no-fornitore" list="list-fornitori" placeholder="Cerca fornitore..." autocomplete="off">
+      <input type="text" id="no-fornitore" list="list-fornitori" placeholder="Cerca o scrivi fornitore..." autocomplete="off">
       <datalist id="list-fornitori"></datalist>
     </div>
     <div class="field">
       <label>Data Ordine</label>
       <input type="date" id="no-data-ord">
     </div>
-    <div class="field">
-      <label>Laboratorio</label>
-      <input type="text" id="no-lab" list="list-lab-no" autocomplete="off">
-      <datalist id="list-lab-no"></datalist>
-    </div>
   </div>
 
-  <!-- Lista prodotti temporanea -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+  <!-- Lista prodotti -->
+  <div style="display:flex;align-items:center;margin-bottom:8px;">
     <h3 style="margin:0;font-size:15px;">Prodotti</h3>
-    <button class="btn-add-row" onclick="noAggiungiRiga()">+ Aggiungi</button>
   </div>
   <div id="no-righe-wrap"></div>
+  <button class="btn-add-row" onclick="noAggiungiRiga()" style="width:100%;padding:11px;margin-top:8px;border-radius:10px;font-size:14px;">
+    + Aggiungi Prodotto
+  </button>
 
   <!-- Barra progresso -->
   <div id="no-progress" style="display:none;margin:12px 0;">
@@ -1380,8 +1377,28 @@ function showPage(id) {
     _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
     _loadDatalist('list-colloc', {action:'collocazioni'}, _COLLOC_FALLBACK);
   } else if (id === 'page-nuovo-ordine') {
-    _loadDatalist('list-lab-no',  {action:'laboratori'}, _LAB_FALLBACK);
-    _loadDatalist('list-tecnici', {action:'tecnici'},    _TEC_FALLBACK);
+    _loadDatalist('list-lab-no', {action:'laboratori'}, _LAB_FALLBACK);
+    // Data ordine: precompila con oggi se vuota
+    var dateEl = document.getElementById('no-data-ord');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+    // Anno: precompila con anno corrente se vuoto
+    var annoEl = document.getElementById('no-anno');
+    if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
+    // Fornitori: popola datalist dai dati ordini già caricati
+    var dlForn = document.getElementById('list-fornitori');
+    if (dlForn) {
+      var fornSet = {};
+      (_dataOrdini || []).forEach(function(o) {
+        (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSet[p.fornitore] = true; });
+        if (o.fornitore) fornSet[o.fornitore] = true;
+      });
+      var fornLista = Object.keys(fornSet).sort();
+      if (fornLista.length) dlForn.innerHTML = fornLista.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    }
+    // Carica anagrafica per autocomplete prodotti
+    _loadAnagrafica(currentSede).catch(function(){});
+    // Aggiunge una riga prodotto se la lista è vuota
+    if (!document.getElementById('no-righe-wrap').children.length) noAggiungiRiga();
   }
 }
 
@@ -1429,6 +1446,10 @@ function riapreDatelist(el) {
 async function _loadDatalist(listId, params, fallbackDati) {
   var dl = document.getElementById(listId);
   if (!dl) return;
+  // Mostra subito il fallback così i dropdown sono usabili senza attendere l'API
+  if (fallbackDati && fallbackDati.length) {
+    dl.innerHTML = fallbackDati.map(function(v) { return '<option value="' + v + '">'; }).join('');
+  }
   var d    = await apiCall(params);
   var dati = (d && d.ok && d.dati && d.dati.length) ? d.dati : (fallbackDati || []);
   dl.innerHTML = dati.map(function(v) { return '<option value="' + v + '">'; }).join('');
