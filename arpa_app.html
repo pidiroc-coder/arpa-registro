@@ -886,13 +886,16 @@ function _getAnaItem(sede, codice) {
   return null;
 }
 
-// Aggiorna datalist con i codici filtrati
+// Aggiorna datalist con i codici filtrati.
+// Non mostra nulla su input vuoto: l'utente deve digitare per vedere i suggerimenti.
 function _aggiornaSuggerimenti(inputEl, sede) {
   var dlId = inputEl.getAttribute('list');
   if (!dlId) return;
   var dl = document.getElementById(dlId);
   if (!dl) return;
-  var matches = _filtraAna(sede, inputEl.value);
+  var val = (inputEl.value || '').trim();
+  if (!val) { dl.innerHTML = ''; return; }
+  var matches = _filtraAna(sede, val);
   // Massimo 50 suggerimenti per non appesantire il DOM
   dl.innerHTML = matches.slice(0,50).map(function(c){
     return '<option value="'+c+'"></option>';
@@ -987,17 +990,20 @@ function noAggiungiRiga(precompila) {
   div.style.cssText = 'margin-bottom:10px;position:relative;';
   var artVal = (precompila && precompila.codice) ? precompila.codice : '';
   var qtaVal = (precompila && precompila.qta)    ? precompila.qta    : '';
+  // Ogni riga ha il proprio datalist dedicato (evita lista condivisa con 500+ voci)
+  var dlId = 'no-art-dl-' + idx;
   div.innerHTML = [
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
     '  <span style="font-size:13px;color:var(--txt2);font-weight:600;">Prodotto #'+(idx+1)+'</span>',
     '  <button onclick="noRimuoviRiga(this)" style="background:none;border:none;',
     '    color:#ef4444;cursor:pointer;font-size:18px;line-height:1;padding:0 4px;">×</button>',
     '</div>',
+    '<datalist id="' + dlId + '"></datalist>',
     '<div class="field">',
     '  <label>Articolo <span class="req">*</span></label>',
     '  <input type="text" class="no-art-input"',
-    '    list="list-ana-' + currentSede.toLowerCase() + '"',
-    '    placeholder="Cerca o scrivi articolo..."',
+    '    list="' + dlId + '"',
+    '    placeholder="Digita per cercare articolo..."',
     '    value="'+artVal+'" autocomplete="off"',
     '    onchange="_noOnArtChange(this)">',
     '</div>',
@@ -1009,14 +1015,9 @@ function noAggiungiRiga(precompila) {
   ].join('');
   wrap.appendChild(div);
 
-  // Collega focus+input sul campo articolo della riga appena creata
+  // Solo il listener input: i suggerimenti appaiono mentre si digita, non al click
   var artInp = div.querySelector('.no-art-input');
   if (artInp) {
-    // Al focus: popola subito la datalist con tutti gli articoli
-    artInp.addEventListener('focus', function() {
-      _aggiornaSuggerimenti(this, currentSede);
-    });
-    // Mentre si digita: filtra la lista in tempo reale
     artInp.addEventListener('input', function() {
       _aggiornaSuggerimenti(this, currentSede);
     });
@@ -1073,13 +1074,12 @@ async function noInvia() {
   if (btnNo && btnNo.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
   if (btnNo) { btnNo.disabled = true; btnNo.style.opacity = '0.6'; }
 
-  // Mostra progresso
-  var prog    = document.getElementById('no-progress');
-  var progBar = document.getElementById('no-progress-bar');
-  var progTxt = document.getElementById('no-progress-txt');
-  prog.style.display = '';
-  progBar.style.width = '20%';
-  progTxt.textContent = 'Invio ordine ' + n + ' prodotti...';
+  // Overlay attesa (blu, come registrazioni singole)
+  var ovP = document.querySelector('#overlayWait p');
+  var ovS = document.querySelector('#overlayWait small');
+  if (ovP) ovP.textContent = 'Registrazione ordine in corso...';
+  if (ovS) ovS.textContent = 'Attendere, non chiudere la pagina.';
+  mostraAttesa(true);
 
   var params = {
     action:      'nuovo_ordine',
@@ -1092,21 +1092,15 @@ async function noInvia() {
     prodotti:    JSON.stringify(righe),
   };
 
-  progBar.style.width = '50%';
   var d = await apiPost(params, 60000);
-  progBar.style.width = '100%';
-
+  mostraAttesa(false);
   if (btnNo) { btnNo.disabled = false; btnNo.style.opacity = '1'; }
 
   if (!d || !d.ok) {
-    prog.style.display = 'none';
     console.error('[noInvia] errore API:', d);
     toast('Errore: ' + (d && d.errore ? d.errore : 'Nessuna risposta'), 'error');
     return;
   }
-
-  prog.style.display = 'none';
-  toast('✅ ' + d.messaggio, 'success');
 
   // Svuota form
   document.getElementById('no-nordine').value  = '';
@@ -1120,6 +1114,15 @@ async function noInvia() {
 
   showPage('page-ordini');
   loadHomeStats();
+
+  setTimeout(function() {
+    document.getElementById('modalSubtesto').innerHTML =
+      '<strong>ORDINE</strong> registrato correttamente nel foglio.<br>' +
+      '<span style="color:#16a34a;font-weight:600;">' + d.righeInserite + ' prodotti — ' + d.idOrdine + '</span>';
+    var modal = document.getElementById('modalSuccesso');
+    if (modal) modal.style.display = 'flex';
+    toast('✅ ' + d.messaggio, 'success');
+  }, 200);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1355,13 +1358,12 @@ async function cmInvia() {
   if (btnCm && btnCm.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
   if (btnCm) { btnCm.disabled = true; btnCm.style.opacity = '0.6'; }
 
-  // Progresso
-  var prog    = document.getElementById('cm-progress');
-  var progBar = document.getElementById('cm-progress-bar');
-  var progTxt = document.getElementById('cm-progress-txt');
-  prog.style.display  = '';
-  progBar.style.width = '10%';
-  progTxt.textContent = 'Invio ' + righe.length + ' carichi...';
+  // Overlay attesa (blu, come registrazioni singole)
+  var ovP = document.querySelector('#overlayWait p');
+  var ovS = document.querySelector('#overlayWait small');
+  if (ovP) ovP.textContent = 'Registrazione CARICO MULTIPLO in corso...';
+  if (ovS) ovS.textContent = righe.length + ' carichi — attendere, non chiudere la pagina.';
+  mostraAttesa(true);
 
   var nonce = 'cm_' + _cmOrdineCorrente.id + '_' + Date.now();
   var params = {
@@ -1375,10 +1377,8 @@ async function cmInvia() {
     righe:   JSON.stringify(righe),
   };
 
-  progBar.style.width = '40%';
   var d = await apiPost(params, 120000);
-  progBar.style.width = '100%';
-  prog.style.display  = 'none';
+  mostraAttesa(false);
   if (btnCm) { btnCm.disabled = false; btnCm.style.opacity = '1'; }
 
   if (!d || !d.ok) {
@@ -1387,20 +1387,27 @@ async function cmInvia() {
     return;
   }
 
-  var msg = '✅ ' + d.messaggio;
-  if (d.errori && d.errori.length)
-    msg += ' | ⚠ ' + d.errori.length + ' saltati: ' + d.errori[0];
-  toast(msg, 'success');
-
   showPage('page-ordini');
   loadHomeStats();
+
+  var nIns = (d.righeInserite || []).length;
+  setTimeout(function() {
+    var subMsg = '<strong>CARICO MULTIPLO</strong> registrato correttamente nel foglio.<br>' +
+      '<span style="color:#16a34a;font-weight:600;">' + nIns + ' carichi — ordine ' + d.ordine + '</span>';
+    if (d.errori && d.errori.length)
+      subMsg += '<br><span style="color:#d97706;font-size:12px;">⚠ ' + d.errori.length + ' saltati: ' + d.errori[0] + '</span>';
+    document.getElementById('modalSubtesto').innerHTML = subMsg;
+    var modal = document.getElementById('modalSuccesso');
+    if (modal) modal.style.display = 'flex';
+    toast('✅ ' + d.messaggio, 'success');
+  }, 200);
 }
 
 // ── CONFIG ──────────────────────────────────────────────────
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzqkv2iy0eWAt1LVEdykvVkhXGiuZGaS5afQKcV6B2nwGbOjWI4aprtaxjxi3o64pXQWw/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzY5RNrLvD9Yj4tCXSeAHR1U-YYTGHyo0ZlpndnA820QhZsvBSR2XZwxEU8ul1LWO7JUg/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
