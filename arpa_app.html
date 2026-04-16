@@ -1221,6 +1221,9 @@ function _cmBuildRighe(ordine, articoliPreSel) {
 
   prodotti.forEach(function(pr, idx) {
     var rim = parseFloat(pr.rimanente) || 0;
+    // Salta prodotti già completamente evasi
+    // (a meno che non siano pre-selezionati esplicitamente)
+    if (rim <= 0 && !(preSelMap && preSelMap[pr.articolo.toUpperCase()])) return;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
     var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
     var div = document.createElement('div');
@@ -1469,24 +1472,17 @@ function showPage(id) {
     // Anno: precompila con anno corrente se vuoto
     var annoEl = document.getElementById('no-anno');
     if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
-    // Fornitori: carica TUTTI dal foglio FORNITORI via API
-    apiCall({action:'fornitori'}).then(function(dF) {
-      var dlForn = document.getElementById('list-fornitori');
-      if (!dlForn) return;
-      var lista = (dF && dF.ok && dF.dati) ? dF.dati : [];
-      // Fallback: se API non risponde usa fornitori dagli ordini
-      if (!lista.length) {
-        var fornSet = {};
-        (_dataOrdini || []).forEach(function(o) {
-          (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSet[p.fornitore] = true; });
-          if (o.fornitore) fornSet[o.fornitore] = true;
-        });
-        lista = Object.keys(fornSet).sort();
-      }
-      if (lista.length) dlForn.innerHTML = lista.map(function(v){
-        return '<option value="'+v+'"></option>';
-      }).join('');
-    }).catch(function(){});
+    // Fornitori: popola datalist dai dati ordini già caricati
+    var dlForn = document.getElementById('list-fornitori');
+    if (dlForn) {
+      var fornSet = {};
+      (_dataOrdini || []).forEach(function(o) {
+        (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSet[p.fornitore] = true; });
+        if (o.fornitore) fornSet[o.fornitore] = true;
+      });
+      var fornLista = Object.keys(fornSet).sort();
+      if (fornLista.length) dlForn.innerHTML = fornLista.map(function(v){ return '<option value="'+v+'">'; }).join('');
+    }
     // Popola datalist articoli condiviso (come list-fornitori)
     _noRefreshArtDl();
     // Se la cache è vuota la ricarica e poi aggiorna il datalist
