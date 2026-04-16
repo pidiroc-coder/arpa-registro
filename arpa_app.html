@@ -1221,9 +1221,6 @@ function _cmBuildRighe(ordine, articoliPreSel) {
 
   prodotti.forEach(function(pr, idx) {
     var rim = parseFloat(pr.rimanente) || 0;
-    // Salta prodotti già completamente evasi
-    // (a meno che non siano pre-selezionati esplicitamente)
-    if (rim <= 0 && !(preSelMap && preSelMap[pr.articolo.toUpperCase()])) return;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
     var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
     var div = document.createElement('div');
@@ -2419,7 +2416,11 @@ function mostraDettaglio(html) {
 
 function mostraDettaglioOrdine(o) {
   var stato = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
-  var prods = (o.prodotti||[]).map(function(p, i) {
+  var prods = (o.prodotti||[]).filter(function(p) {
+    // Escludi prodotti già completamente evasi dal modale
+    var rim = Math.max(0, (parseFloat(p.qtaOrd)||0) - (parseFloat(p.qtaCar)||0));
+    return rim > 0;
+  }).map(function(p, i) {
     var qO  = parseFloat(p.qtaOrd)||0;
     var qC  = parseFloat(p.qtaCar)||0;
     var rim = Math.max(0, qO - qC);
