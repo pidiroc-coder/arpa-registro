@@ -1092,7 +1092,7 @@ async function noInvia() {
     prodotti:    JSON.stringify(righe),
   };
 
-  var d = await apiPost(params, 60000);
+  var d = await apiCall(params, 60000);
   mostraAttesa(false);
   if (btnNo) { btnNo.disabled = false; btnNo.style.opacity = '1'; }
 
@@ -1377,7 +1377,7 @@ async function cmInvia() {
     righe:   JSON.stringify(righe),
   };
 
-  var d = await apiPost(params, 120000);
+  var d = await apiCall(params, 120000);
   mostraAttesa(false);
   if (btnCm) { btnCm.disabled = false; btnCm.style.opacity = '1'; }
 
