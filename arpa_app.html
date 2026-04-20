@@ -1116,9 +1116,23 @@ async function noInvia() {
   loadHomeStats();
 
   setTimeout(function() {
-    document.getElementById('modalSubtesto').innerHTML =
-      '<strong>ORDINE</strong> registrato correttamente nel foglio.<br>' +
+    var subtesto = '<strong>ORDINE</strong> registrato correttamente nel foglio.<br>' +
       '<span style="color:#16a34a;font-weight:600;">' + d.righeInserite + ' prodotti — ' + d.idOrdine + '</span>';
+    // Mostra avvisi su ordini precedenti non evasi (stesso articolo)
+    if (d.avvisi && d.avvisi.length) {
+      subtesto += '<div style="margin-top:14px;padding:10px 12px;background:#fef3c7;' +
+                  'border-left:4px solid #f59e0b;border-radius:6px;text-align:left;' +
+                  'font-size:13px;color:#92400e;">' +
+                  '<div style="font-weight:700;margin-bottom:6px;">' +
+                  '⚠ Attenzione: ordini precedenti non evasi</div>';
+      d.avvisi.forEach(function(a) {
+        subtesto += '<div style="margin-bottom:4px;line-height:1.4;">• ' + a + '</div>';
+      });
+      subtesto += '<div style="margin-top:6px;font-size:12px;color:#78350f;font-style:italic;">' +
+                  'Verifica se questo nuovo ordine è necessario o se è sufficiente ' +
+                  'attendere l\'evasione di quelli già aperti.</div></div>';
+    }
+    document.getElementById('modalSubtesto').innerHTML = subtesto;
     var modal = document.getElementById('modalSuccesso');
     if (modal) modal.style.display = 'flex';
     toast('✅ ' + d.messaggio, 'success');
@@ -1407,7 +1421,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxgnurmQiQ2wy5NQQLHG5AhJ8bWYWCqkXfeD36GFziJliJSpDEYmWtVJRmO3ZShWp9yPQ/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwI5C01U2zhIX32r0c68MAflF9g_vFGtknCYn13pp_2I68HBW6oNlW-oe9j36dR2bBTeg/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -2416,11 +2430,7 @@ function mostraDettaglio(html) {
 
 function mostraDettaglioOrdine(o) {
   var stato = o.stato === 'EVASO' ? 'stato-evaso' : o.stato === 'EVASO PARZIALMENTE' ? 'stato-par' : 'stato-da';
-  var prods = (o.prodotti||[]).filter(function(p) {
-    // Escludi prodotti già completamente evasi dal modale
-    var rim = Math.max(0, (parseFloat(p.qtaOrd)||0) - (parseFloat(p.qtaCar)||0));
-    return rim > 0;
-  }).map(function(p, i) {
+  var prods = (o.prodotti||[]).map(function(p, i) {
     var qO  = parseFloat(p.qtaOrd)||0;
     var qC  = parseFloat(p.qtaCar)||0;
     var rim = Math.max(0, qO - qC);
