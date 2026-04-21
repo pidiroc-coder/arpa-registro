@@ -1235,6 +1235,9 @@ function _cmBuildRighe(ordine, articoliPreSel) {
 
   prodotti.forEach(function(pr, idx) {
     var rim = parseFloat(pr.rimanente) || 0;
+    // Salta prodotti già completamente evasi
+    // (a meno che non siano pre-selezionati esplicitamente)
+    if (rim <= 0 && !(preSelMap && preSelMap[pr.articolo.toUpperCase()])) return;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
     var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
     var div = document.createElement('div');
@@ -1421,7 +1424,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwI5C01U2zhIX32r0c68MAflF9g_vFGtknCYn13pp_2I68HBW6oNlW-oe9j36dR2bBTeg/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzlVLTYqnENz32W5Fp9Lz7t39fjCMtEpdhGmlgegb8T5oKEPvlB0d3F4OG4JTs5_Sxc1A/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
