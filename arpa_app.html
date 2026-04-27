@@ -237,9 +237,151 @@
     cursor: pointer;
   }
   .cm-riga .field label, .no-riga .field label { font-size: 12px; margin-bottom: 3px; }
+
+  /* ═══════════════════════════ SCHERMATA PIN ═════════════════════════ */
+  #pin-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #5b21b6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  #pin-overlay.hidden { display: none; }
+  .pin-box {
+    background: #fff;
+    border-radius: 18px;
+    padding: 32px 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    text-align: center;
+  }
+  .pin-logo {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 4px;
+  }
+  .pin-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 24px;
+  }
+  .pin-title {
+    font-size: 15px;
+    color: #334155;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .pin-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: transparent;
+    transition: all 0.15s ease;
+  }
+  .pin-dot.filled {
+    background: #1e40af;
+    border-color: #1e40af;
+    transform: scale(1.1);
+  }
+  .pin-dot.error {
+    border-color: #dc2626;
+    background: #fef2f2;
+    animation: pinShake 0.4s ease;
+  }
+  @keyframes pinShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .pin-key {
+    padding: 16px 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1e293b;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s ease;
+  }
+  .pin-key:active {
+    background: #cbd5e1;
+    transform: scale(0.96);
+  }
+  .pin-key.pin-key-del {
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 18px;
+  }
+  .pin-key.pin-key-del:active { background: #fecaca; }
+  .pin-key-empty {
+    background: transparent;
+    cursor: default;
+  }
+  .pin-key-empty:active { background: transparent; transform: none; }
+  .pin-error-msg {
+    color: #dc2626;
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 18px;
+    font-weight: 500;
+  }
+
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════ SCHERMATA PIN ═════════════════════════ -->
+<div id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-logo">ARPA Molise</div>
+    <div class="pin-subtitle">Registro Laboratorio</div>
+    <div class="pin-title">Inserisci il PIN di accesso</div>
+    <div class="pin-dots">
+      <div class="pin-dot" data-i="0"></div>
+      <div class="pin-dot" data-i="1"></div>
+      <div class="pin-dot" data-i="2"></div>
+      <div class="pin-dot" data-i="3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button type="button" class="pin-key" data-d="1">1</button>
+      <button type="button" class="pin-key" data-d="2">2</button>
+      <button type="button" class="pin-key" data-d="3">3</button>
+      <button type="button" class="pin-key" data-d="4">4</button>
+      <button type="button" class="pin-key" data-d="5">5</button>
+      <button type="button" class="pin-key" data-d="6">6</button>
+      <button type="button" class="pin-key" data-d="7">7</button>
+      <button type="button" class="pin-key" data-d="8">8</button>
+      <button type="button" class="pin-key" data-d="9">9</button>
+      <button type="button" class="pin-key pin-key-empty"></button>
+      <button type="button" class="pin-key" data-d="0">0</button>
+      <button type="button" class="pin-key pin-key-del" data-d="del">⌫</button>
+    </div>
+    <div class="pin-error-msg" id="pin-error-msg"></div>
+  </div>
+</div>
+
+
 
 <!-- HEADER -->
 <div class="header">
@@ -844,6 +986,160 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ══════════════════════════════════════════════════════════
+// SCHERMATA PIN DI ACCESSO (via API)
+// ══════════════════════════════════════════════════════════
+// Il PIN è validato lato server via endpoint `pin_verify`.
+// Dopo lo sblocco riuscito, l'API rilascia un sessionToken
+// salvato in localStorage e validato ad ogni apertura con
+// l'endpoint `pin_session`.
+//
+// Per cambiare il PIN: modifica la costante PIN_APP in api_v3.gs
+// (nuovo deployment necessario).
+// Per disabilitarlo: imposta PIN_ENABLED = false in api_v3.gs.
+// ══════════════════════════════════════════════════════════
+
+var _pinBuffer = '';
+var _pinDeviceId = null;
+var _pinInProgress = false;
+
+function _pinGetDeviceId() {
+  if (_pinDeviceId) return _pinDeviceId;
+  try {
+    var d = localStorage.getItem('pin_device_id');
+    if (!d) {
+      d = 'd_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+      localStorage.setItem('pin_device_id', d);
+    }
+    _pinDeviceId = d;
+  } catch(e) {
+    _pinDeviceId = 'd_fallback_' + Date.now();
+  }
+  return _pinDeviceId;
+}
+
+function _pinAggiornaDots() {
+  document.querySelectorAll('.pin-dot').forEach(function(d, i) {
+    d.classList.remove('error');
+    if (i < _pinBuffer.length) d.classList.add('filled');
+    else d.classList.remove('filled');
+  });
+}
+
+function _pinMostraErrore(msg) {
+  var el = document.getElementById('pin-error-msg');
+  document.querySelectorAll('.pin-dot').forEach(function(d) {
+    d.classList.add('error');
+    d.classList.remove('filled');
+  });
+  if (el) el.textContent = msg || 'PIN errato — riprova';
+  _pinBuffer = '';
+  setTimeout(_pinAggiornaDots, 350);
+  setTimeout(function() { if (el) el.textContent = ''; }, 3000);
+}
+
+function _pinSuccesso(sessionToken) {
+  try {
+    if (sessionToken) localStorage.setItem('pin_session_token', sessionToken);
+  } catch(e) {}
+  var ov = document.getElementById('pin-overlay');
+  if (ov) {
+    ov.style.transition = 'opacity 0.25s ease';
+    ov.style.opacity = '0';
+    setTimeout(function() { ov.classList.add('hidden'); }, 260);
+  }
+}
+
+async function _pinVerificaViaAPI() {
+  if (_pinInProgress) return;
+  _pinInProgress = true;
+  var pinTentato = _pinBuffer;
+  try {
+    var d = await apiCall({
+      action: 'pin_verify',
+      pin:    pinTentato,
+      device: _pinGetDeviceId()
+    });
+    if (d && d.ok) {
+      _pinSuccesso(d.sessionToken);
+    } else {
+      var msg = (d && d.errore) ? d.errore : 'PIN errato';
+      if (d && d.bloccato) msg = 'Troppi tentativi. Riprova tra qualche minuto.';
+      else if (d && d.tentativiRimasti !== undefined)
+        msg = 'PIN errato — ' + d.tentativiRimasti + ' tentativi rimasti';
+      _pinMostraErrore(msg);
+    }
+  } catch(e) {
+    _pinMostraErrore('Errore connessione — riprova');
+  } finally {
+    _pinInProgress = false;
+  }
+}
+
+function _pinDigit(d) {
+  if (_pinInProgress) return;
+  if (d === 'del') {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    _pinAggiornaDots();
+    return;
+  }
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += d;
+  _pinAggiornaDots();
+  if (_pinBuffer.length === 4) {
+    setTimeout(_pinVerificaViaAPI, 150);
+  }
+}
+
+async function _pinVerificaSessioneEsistente() {
+  var token = null;
+  try { token = localStorage.getItem('pin_session_token'); } catch(e) {}
+  if (!token) return false;
+  try {
+    var d = await apiCall({action:'pin_session', sessionToken: token});
+    if (d && d.ok) return true;
+    // Token scaduto: rimuovi
+    try { localStorage.removeItem('pin_session_token'); } catch(e) {}
+    return false;
+  } catch(e) {
+    // Errore connessione: per UX consenti accesso se c'era una sessione
+    // (evita di bloccare l'utente se l'API è temporaneamente down)
+    return false;
+  }
+}
+
+async function _pinInit() {
+  var overlay = document.getElementById('pin-overlay');
+  if (!overlay) return;
+
+  // Aggancia i listener subito (così funzionano se serve mostrare il PIN)
+  document.querySelectorAll('.pin-key[data-d]').forEach(function(k) {
+    k.addEventListener('click', function() { _pinDigit(k.getAttribute('data-d')); });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (overlay.classList.contains('hidden')) return;
+    if (e.key >= '0' && e.key <= '9') _pinDigit(e.key);
+    else if (e.key === 'Backspace') _pinDigit('del');
+  });
+
+  // Prova a validare una sessione esistente
+  var valido = await _pinVerificaSessioneEsistente();
+  if (valido) {
+    overlay.classList.add('hidden');
+    return;
+  }
+  // Sessione scaduta/assente: mostra la schermata PIN (è già visibile per default)
+}
+
+// Inizializza il PIN appena il DOM è pronto
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _pinInit);
+} else {
+  _pinInit();
+}
+
+
+
 // ── CACHE ANAGRAFICA IN-MEMORY ────────────────────────────
 // Carica UNA SOLA VOLTA per sede e mantiene in memoria.
 // Non usa localStorage (dati cambiano spesso).
@@ -1424,7 +1720,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzlVLTYqnENz32W5Fp9Lz7t39fjCMtEpdhGmlgegb8T5oKEPvlB0d3F4OG4JTs5_Sxc1A/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxV6c3nmS0FXJ7xn31sbiFbn1WuVZNM5MJEFZIkaZN0fESyDyfvZiZvn7EKFLA6KGvC4g/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
