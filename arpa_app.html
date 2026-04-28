@@ -243,13 +243,37 @@
     position: fixed;
     inset: 0;
     background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #5b21b6 100%);
-    display: flex;
+    display: none; /* parte nascosto - mostra solo se serve PIN */
     align-items: center;
     justify-content: center;
     z-index: 9999;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+  #pin-overlay.show { display: flex; }
   #pin-overlay.hidden { display: none; }
+  /* Splash di avvio: mini-overlay neutro mentre l'app verifica la sessione */
+  #pin-loader {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #1e40af 0%, #3730a3 50%, #5b21b6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    transition: opacity 0.2s ease;
+  }
+  #pin-loader.hidden { opacity: 0; pointer-events: none; }
+  .pin-loader-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255,255,255,0.25);
+    border-top-color: rgba(255,255,255,0.95);
+    border-radius: 50%;
+    animation: pinSpin 0.7s linear infinite;
+  }
+  @keyframes pinSpin {
+    to { transform: rotate(360deg); }
+  }
   .pin-box {
     background: #fff;
     border-radius: 18px;
@@ -350,6 +374,11 @@
 </style>
 </head>
 <body>
+
+<!-- Splash di avvio (visibile mentre verifica sessione PIN) -->
+<div id="pin-loader">
+  <div class="pin-loader-spinner"></div>
+</div>
 
 <!-- ═══════════════════════════ SCHERMATA PIN ═════════════════════════ -->
 <div id="pin-overlay">
@@ -1042,8 +1071,15 @@ function _pinSuccesso(sessionToken) {
   try {
     if (sessionToken) localStorage.setItem('pin_session_token', sessionToken);
   } catch(e) {}
-  var ov = document.getElementById('pin-overlay');
+  // Nascondi sia il loader sia il PIN overlay (qualunque sia visibile)
+  var loader = document.getElementById('pin-loader');
+  var ov     = document.getElementById('pin-overlay');
+  if (loader) {
+    loader.classList.add('hidden');
+    setTimeout(function() { loader.style.display = 'none'; }, 220);
+  }
   if (ov) {
+    ov.classList.remove('show');
     ov.style.transition = 'opacity 0.25s ease';
     ov.style.opacity = '0';
     setTimeout(function() { ov.classList.add('hidden'); }, 260);
@@ -1110,25 +1146,32 @@ async function _pinVerificaSessioneEsistente() {
 
 async function _pinInit() {
   var overlay = document.getElementById('pin-overlay');
+  var loader  = document.getElementById('pin-loader');
   if (!overlay) return;
 
-  // Aggancia i listener subito (così funzionano se serve mostrare il PIN)
+  // Aggancia i listener (servono solo se mostriamo il PIN)
   document.querySelectorAll('.pin-key[data-d]').forEach(function(k) {
     k.addEventListener('click', function() { _pinDigit(k.getAttribute('data-d')); });
   });
   document.addEventListener('keydown', function(e) {
-    if (overlay.classList.contains('hidden')) return;
+    if (overlay.classList.contains('hidden') || !overlay.classList.contains('show')) return;
     if (e.key >= '0' && e.key <= '9') _pinDigit(e.key);
     else if (e.key === 'Backspace') _pinDigit('del');
   });
 
-  // Prova a validare una sessione esistente
+  // Verifica la sessione: durante l'attesa l'utente vede solo lo spinner
   var valido = await _pinVerificaSessioneEsistente();
   if (valido) {
-    overlay.classList.add('hidden');
+    // Sessione valida: nascondi lo spinner e prosegui senza mostrare il PIN
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(function() { loader.style.display = 'none'; }, 220);
+    }
     return;
   }
-  // Sessione scaduta/assente: mostra la schermata PIN (è già visibile per default)
+  // Sessione scaduta/assente: mostra il PIN al posto dello spinner
+  if (loader) loader.style.display = 'none';
+  overlay.classList.add('show');
 }
 
 // Inizializza il PIN appena il DOM è pronto
