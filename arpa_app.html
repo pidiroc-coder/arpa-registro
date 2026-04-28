@@ -195,7 +195,7 @@
   /* ── OVERLAY CLESSIDRA ── */
   .overlay-wait {
     position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
-    background:rgba(26,39,68,0.85);
+    background:rgba(30,64,175,0.92);
     flex-direction:column; align-items:center; justify-content:center; gap:18px;
   }
   .hourglass {
@@ -842,6 +842,7 @@
     <div class="filter-chip" onclick="filterRegTipo(this,'CARICO')">Carichi</div>
     <div class="filter-chip" onclick="filterRegTipo(this,'APERTURA')">Aperture</div>
     <div class="filter-chip" onclick="filterRegTipo(this,'SCARICO')">Scarichi</div>
+    <div class="filter-chip" onclick="filterRegTipo(this,'TRASFERIMENTO')" style="border-color:#7c3aed;color:#7c3aed;">Trasferimenti</div>
   </div>
   <div id="registroList"><div class="loading"><div class="spinner"></div><p>Caricamento movimenti...</p></div></div>
 </div>
@@ -2328,7 +2329,16 @@ function renderRegistro() {
   var search = (document.getElementById('regSearch').value||'').toLowerCase();
   var list   = document.getElementById('registroList');
   var data   = _dataRegistro.filter(function(m){
-    var tipoOk = regTipoFilter === 'ALL' || m.tipo === regTipoFilter;
+    var isTrasf = (m.note || '').indexOf('[TRASFERIMENTO') === 0;
+    var tipoOk;
+    if (regTipoFilter === 'ALL') {
+      tipoOk = true;
+    } else if (regTipoFilter === 'TRASFERIMENTO') {
+      tipoOk = isTrasf;
+    } else {
+      // Filtri CARICO/APERTURA/SCARICO: escludi i trasferimenti
+      tipoOk = (m.tipo === regTipoFilter) && !isTrasf;
+    }
     var txtOk  = !search || m.articolo.toLowerCase().indexOf(search) !== -1;
     return tipoOk && txtOk;
   });
@@ -2336,7 +2346,15 @@ function renderRegistro() {
   window._movFiltered = data;
   list.innerHTML = '<div class="mov-list">' + data.map(function(m, idx) {
     return '<div class="mov-card" onclick="mostraDettaglioMovimento(window._movFiltered['+idx+'])" style="cursor:pointer;"><div class="mov-top">' +
-      '<span class="mov-tipo ' + m.tipo + '">' + m.tipo + '</span>' +
+      (function() {
+      var isT = (m.note || '').indexOf('[TRASFERIMENTO') === 0;
+      if (isT) {
+        var freccia = (m.note || '').indexOf('\u2192') !== -1 ? '\u2192' : '\u2190';
+        return '<span class="mov-tipo TRASFERIMENTO" style="background:#ede9fe;color:#7c3aed;">' +
+               'TRASFERIMENTO ' + freccia + '</span>';
+      }
+      return '<span class="mov-tipo ' + m.tipo + '">' + m.tipo + '</span>';
+    })() +
       '<span class="mov-data">' + (m.data||'—') + '</span>' +
       '</div><div class="mov-art">' + m.articolo + '</div>' +
       '<div class="mov-sub">' +
@@ -3250,7 +3268,12 @@ async function trConferma() {
     mostraAttesa(false);
     if (btnTr) { btnTr.disabled = false; btnTr.style.opacity = '1'; }
     if (d && d.ok) {
-      toast('✓ Trasferimento registrato: ' + d.id, 'success');
+      // Messaggio di successo dettagliato
+      var msg = '✓ Trasferimento completato';
+      if (d.idScarico && d.idCarico) {
+        msg += ' — ' + d.idScarico + ' / ' + d.idCarico;
+      }
+      toast(msg, 'success');
       document.getElementById('tr-modal').style.display = 'none';
       _trCaricoCorrente = null;
       trCaricaCarichi(); // ricarica la lista
