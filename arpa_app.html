@@ -1073,8 +1073,15 @@
         <input type="number" id="tr-quantita" min="1" step="1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
       </div>
       <div class="form-row">
-        <label>Tecnico che esegue</label>
-        <input type="text" id="tr-tecnico" list="list-tec" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+        <label>Laboratorio destinatario <span style="color:#dc2626;">*</span></label>
+        <select id="tr-lab" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;background:#fff;">
+          <option value="">— seleziona —</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Tecnico che esegue <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="tr-tecnico" list="list-tec-tr" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+        <datalist id="list-tec-tr"></datalist>
       </div>
       <div class="form-row">
         <label>Data trasferimento</label>
@@ -3128,21 +3135,35 @@ async function trCaricaCarichi() {
   }
 }
 
-function trSelezionaCarico(idCarico) {
+async function trSelezionaCarico(idCarico) {
   var c = (window._trCarichiCache || {})[idCarico];
   if (!c) return;
   _trCaricoCorrente = c;
+  var sedeDest = _trGetSedeDest();
   // Pre-compila il modale
   document.getElementById('tr-modal-info').innerHTML =
     '<strong>' + c.articolo + '</strong><br>' +
     'Carico: ' + c.idCarico + '<br>' +
-    'Da <strong>' + currentSede + '</strong> a <strong>' + _trGetSedeDest() + '</strong><br>' +
+    'Da <strong>' + currentSede + '</strong> a <strong>' + sedeDest + '</strong><br>' +
     'Disponibile: ' + c.qtaResidua + ' ' + (c.udm || 'pz');
   document.getElementById('tr-quantita').value = c.qtaResidua;
   document.getElementById('tr-quantita').max   = c.qtaResidua;
   document.getElementById('tr-tecnico').value  = '';
   document.getElementById('tr-data').value     = new Date().toISOString().substring(0,10);
   document.getElementById('tr-note').value     = '';
+  // Popola dropdown laboratori della SEDE DI DESTINAZIONE
+  // (la merce arriva lì, quindi va assegnata a un lab di quella sede)
+  var sel = document.getElementById('tr-lab');
+  sel.innerHTML = '<option value="">caricamento...</option>';
+  try {
+    var d = await apiCall({action:'laboratori', sede:sedeDest});
+    var opts = '<option value="">— seleziona —</option>';
+    var labs = (d && d.dati && d.dati.length) ? d.dati : (typeof _LAB_FALLBACK !== 'undefined' ? _LAB_FALLBACK : []);
+    labs.forEach(function(l) { opts += '<option value="' + l + '">' + l + '</option>'; });
+    sel.innerHTML = opts;
+  } catch(e) {
+    sel.innerHTML = '<option value="">errore caricamento</option>';
+  }
   document.getElementById('tr-modal').style.display = 'flex';
 }
 
@@ -3157,10 +3178,12 @@ async function trConferma() {
   var tec = (document.getElementById('tr-tecnico').value || '').trim();
   var dat = (document.getElementById('tr-data').value || '').trim();
   var note = (document.getElementById('tr-note').value || '').trim();
+  var lab = (document.getElementById('tr-lab').value || '').trim();
   if (qta <= 0 || qta > _trCaricoCorrente.qtaResidua) {
     toast('Quantità non valida', 'error');
     return;
   }
+  if (!lab) { toast('Laboratorio destinatario obbligatorio', 'error'); return; }
   if (!tec) { toast('Tecnico obbligatorio', 'error'); return; }
   if (!dat) { toast('Data obbligatoria', 'error'); return; }
   // Converti data ISO in formato dd/mm/yyyy per il foglio
@@ -3177,7 +3200,7 @@ async function trConferma() {
       sedeOrigine:   currentSede,            // origine
       idCarico:      _trCaricoCorrente.idCarico,
       articolo:      _trCaricoCorrente.articolo,
-      lab:           'TRASFERIMENTO',
+      lab:           lab,
       quantita:      qta,
       tecnico:       tec,
       data:          dataIT,
@@ -3204,9 +3227,9 @@ var _trShowPageOriginale = window.showPage;
 window.showPage = function(id) {
   _trShowPageOriginale(id);
   if (id === 'page-trasferimento') {
-    // Carica datalist tecnici per il modale di conferma
+    // Carica datalist tecnici per il modale (id univoco list-tec-tr)
     if (typeof _loadDatalist === 'function') {
-      _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
+      _loadDatalist('list-tec-tr', {action:'tecnici'}, _TEC_FALLBACK);
     }
     trCaricaCarichi();
   }
