@@ -499,6 +499,17 @@
       <span class="op-label">Scarico</span>
       <span class="op-desc">Registra uscita</span>
     </div>
+    <div class="op-btn op-btn-wide" onclick="showPage('page-trasferimento')">
+      <div class="op-icon" style="background:#ede9fe;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 8h13l-3-3M21 16H8l3 3" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <span class="op-label">Trasferimento tra Sedi</span>
+        <div class="op-desc" style="text-align:left;margin-top:2px;">Sposta carichi CB ↔ IS</div>
+      </div>
+    </div>
     <div class="op-btn op-btn-wide" onclick="showPage('page-registro')">
       <div class="op-icon blu" style="background:#f1f5f9;">
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -1013,6 +1024,73 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+
+<!-- ═══════════════════════════ TRASFERIMENTO TRA SEDI ═════════════════════════ -->
+<div class="page" id="page-trasferimento" style="display:none;">
+  <div class="page-header">
+    <button class="back-btn" onclick="showPage('page-home')" aria-label="Indietro">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M14 4l-8 7 8 7" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h2 style="margin:0;font-size:18px;color:#1e293b;">Trasferimento tra Sedi</h2>
+  </div>
+
+  <div class="card" style="margin-top:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">Sposta da</div>
+        <div id="tr-sede-origine" style="font-size:20px;font-weight:700;color:#7c3aed;">CB</div>
+      </div>
+      <div style="color:#7c3aed;font-size:24px;">→</div>
+      <div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">Verso</div>
+        <div id="tr-sede-dest" style="font-size:20px;font-weight:700;color:#16a34a;">IS</div>
+      </div>
+      <button onclick="trInverteSedi()" style="margin-left:auto;background:#f1f5f9;border:none;padding:8px;border-radius:8px;cursor:pointer;" aria-label="Inverti sedi">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 8l3-3 3 3M15 12l-3 3-3-3" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;">
+    <h3 style="font-size:14px;color:#475569;margin:0 0 8px 12px;">Carichi disponibili in <span id="tr-sede-label">CB</span></h3>
+    <div id="tr-lista-carichi">
+      <div style="text-align:center;padding:30px;color:#94a3b8;">Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- Modale conferma trasferimento -->
+  <div id="tr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:12px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;">
+      <h3 style="margin:0 0 12px 0;color:#1e293b;font-size:18px;">Conferma trasferimento</h3>
+      <div id="tr-modal-info" style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:12px;font-size:14px;color:#475569;"></div>
+      <div class="form-row">
+        <label>Quantità da trasferire</label>
+        <input type="number" id="tr-quantita" min="1" step="1" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+      </div>
+      <div class="form-row">
+        <label>Tecnico che esegue</label>
+        <input type="text" id="tr-tecnico" list="list-tec" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+      </div>
+      <div class="form-row">
+        <label>Data trasferimento</label>
+        <input type="date" id="tr-data" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+      </div>
+      <div class="form-row">
+        <label>Note (facoltative)</label>
+        <input type="text" id="tr-note" placeholder="Es. richiesta urgente lab acque" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button onclick="trAnnulla()" style="flex:1;padding:12px;background:#e2e8f0;border:none;border-radius:8px;font-size:15px;font-weight:600;color:#475569;cursor:pointer;">Annulla</button>
+        <button onclick="trConferma()" style="flex:1;padding:12px;background:#7c3aed;border:none;border-radius:8px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;">Trasferisci</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════════
@@ -1763,7 +1841,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxV6c3nmS0FXJ7xn31sbiFbn1WuVZNM5MJEFZIkaZN0fESyDyfvZiZvn7EKFLA6KGvC4g/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzP89EdyKcVGrX6z3Vs9RnL3slvoMTcdxR-_gJ67ZuVyyl-uny4ZutwMni1tKlt8iF0FA/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -2972,6 +3050,160 @@ document.getElementById('btnCB').classList.add('active');
 document.getElementById('btnIS').classList.remove('active');
 document.getElementById('userBadge').textContent = 'CB';
 loadHomeStats();
+
+// ══════════════════════════════════════════════════════════
+// TRASFERIMENTO TRA SEDI
+// ══════════════════════════════════════════════════════════
+var _trCaricoCorrente = null;
+
+function _trGetSedeDest() {
+  // La destinazione è sempre l'altra sede rispetto a currentSede (origine)
+  return currentSede === 'CB' ? 'IS' : 'CB';
+}
+
+function trAggiornaIntestazione() {
+  document.getElementById('tr-sede-origine').textContent = currentSede;
+  document.getElementById('tr-sede-dest').textContent    = _trGetSedeDest();
+  document.getElementById('tr-sede-label').textContent   = currentSede;
+}
+
+function trInverteSedi() {
+  // Cambia la sede correntemente attiva (sede di origine del trasferimento)
+  currentSede = _trGetSedeDest();
+  try { localStorage.setItem('currentSede', currentSede); } catch(e) {}
+  // Aggiorna il badge sede nell'header se esiste
+  var badge = document.querySelector('.sede-badge');
+  if (badge) badge.textContent = currentSede;
+  trAggiornaIntestazione();
+  trCaricaCarichi();
+}
+
+async function trCaricaCarichi() {
+  trAggiornaIntestazione();
+  var container = document.getElementById('tr-lista-carichi');
+  container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;">Caricamento...</div>';
+  try {
+    var d = await apiCall({action:'carichi_trasferibili', sede:currentSede});
+    if (!d || !d.ok) {
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:#dc2626;">Errore: ' +
+        ((d && d.errore) || 'risposta non valida') + '</div>';
+      return;
+    }
+    if (!d.dati || !d.dati.length) {
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;">' +
+        'Nessun carico disponibile per il trasferimento da ' + currentSede + '.</div>';
+      return;
+    }
+    var html = '';
+    d.dati.forEach(function(c) {
+      var lottoStr = c.lotto ? ' · Lotto ' + c.lotto : '';
+      var scadStr  = c.scad  ? ' · Scad. ' + c.scad  : '';
+      html += '<div class="card" style="margin-bottom:8px;cursor:pointer;border-left:3px solid #7c3aed;" ' +
+              'onclick="trSelezionaCarico(\'' + c.idCarico + '\')">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;color:#1e293b;font-size:14px;">' + (c.articolo || '—') + '</div>' +
+            '<div style="font-size:12px;color:#64748b;margin-top:3px;">' +
+              c.idCarico + lottoStr + scadStr +
+            '</div>' +
+            '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">' +
+              'Collocazione: ' + (c.colloc || '—') +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right;flex-shrink:0;">' +
+            '<div style="font-size:18px;font-weight:700;color:#7c3aed;">' + c.qtaResidua + '</div>' +
+            '<div style="font-size:11px;color:#94a3b8;">' + (c.udm || 'pz') + ' disp.</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    container.innerHTML = html;
+    // Memorizza i dati per uso successivo
+    window._trCarichiCache = {};
+    d.dati.forEach(function(c){ window._trCarichiCache[c.idCarico] = c; });
+  } catch(e) {
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:#dc2626;">Errore connessione</div>';
+  }
+}
+
+function trSelezionaCarico(idCarico) {
+  var c = (window._trCarichiCache || {})[idCarico];
+  if (!c) return;
+  _trCaricoCorrente = c;
+  // Pre-compila il modale
+  document.getElementById('tr-modal-info').innerHTML =
+    '<strong>' + c.articolo + '</strong><br>' +
+    'Carico: ' + c.idCarico + '<br>' +
+    'Da <strong>' + currentSede + '</strong> a <strong>' + _trGetSedeDest() + '</strong><br>' +
+    'Disponibile: ' + c.qtaResidua + ' ' + (c.udm || 'pz');
+  document.getElementById('tr-quantita').value = c.qtaResidua;
+  document.getElementById('tr-quantita').max   = c.qtaResidua;
+  document.getElementById('tr-tecnico').value  = '';
+  document.getElementById('tr-data').value     = new Date().toISOString().substring(0,10);
+  document.getElementById('tr-note').value     = '';
+  document.getElementById('tr-modal').style.display = 'flex';
+}
+
+function trAnnulla() {
+  document.getElementById('tr-modal').style.display = 'none';
+  _trCaricoCorrente = null;
+}
+
+async function trConferma() {
+  if (!_trCaricoCorrente) return;
+  var qta = parseFloat(document.getElementById('tr-quantita').value || '0');
+  var tec = (document.getElementById('tr-tecnico').value || '').trim();
+  var dat = (document.getElementById('tr-data').value || '').trim();
+  var note = (document.getElementById('tr-note').value || '').trim();
+  if (qta <= 0 || qta > _trCaricoCorrente.qtaResidua) {
+    toast('Quantità non valida', 'error');
+    return;
+  }
+  if (!tec) { toast('Tecnico obbligatorio', 'error'); return; }
+  if (!dat) { toast('Data obbligatoria', 'error'); return; }
+  // Converti data ISO in formato dd/mm/yyyy per il foglio
+  var dataIT = dat;
+  if (dat && dat.indexOf('-') !== -1) {
+    var p = dat.split('-');
+    if (p.length === 3) dataIT = p[2] + '/' + p[1] + '/' + p[0];
+  }
+  toast('Trasferimento in corso...', 'info');
+  try {
+    var d = await apiCall({
+      action:        'trasferimento',
+      sede:          _trGetSedeDest(),       // destinazione
+      sedeOrigine:   currentSede,            // origine
+      idCarico:      _trCaricoCorrente.idCarico,
+      articolo:      _trCaricoCorrente.articolo,
+      lab:           'TRASFERIMENTO',
+      quantita:      qta,
+      tecnico:       tec,
+      data:          dataIT,
+      lotto:         _trCaricoCorrente.lotto || '',
+      scadenza:      _trCaricoCorrente.scad  || '',
+      tracciabilita: _trCaricoCorrente.tracc || 'NO',
+      note:          note
+    }, 60000);
+    if (d && d.ok) {
+      toast('✓ Trasferimento registrato: ' + d.id, 'success');
+      document.getElementById('tr-modal').style.display = 'none';
+      _trCaricoCorrente = null;
+      trCaricaCarichi(); // ricarica la lista
+    } else {
+      toast('Errore: ' + ((d && d.errore) || 'risposta non valida'), 'error');
+    }
+  } catch(e) {
+    toast('Errore connessione', 'error');
+  }
+}
+
+// Aggancia il caricamento alla showPage (quando si apre la pagina)
+var _trShowPageOriginale = window.showPage;
+window.showPage = function(id) {
+  _trShowPageOriginale(id);
+  if (id === 'page-trasferimento') trCaricaCarichi();
+};
+
 </script>
 </body>
 </html>
