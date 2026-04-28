@@ -1080,8 +1080,9 @@
       </div>
       <div class="form-row">
         <label>Tecnico che esegue <span style="color:#dc2626;">*</span></label>
-        <input type="text" id="tr-tecnico" list="list-tec-tr" autocomplete="off" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;">
-        <datalist id="list-tec-tr"></datalist>
+        <select id="tr-tecnico" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:16px;background:#fff;">
+          <option value="">— seleziona —</option>
+        </select>
       </div>
       <div class="form-row">
         <label>Data trasferimento</label>
@@ -3152,17 +3153,43 @@ async function trSelezionaCarico(idCarico) {
   document.getElementById('tr-data').value     = new Date().toISOString().substring(0,10);
   document.getElementById('tr-note').value     = '';
   // Popola dropdown laboratori della SEDE DI DESTINAZIONE
-  // (la merce arriva lì, quindi va assegnata a un lab di quella sede)
   var sel = document.getElementById('tr-lab');
   sel.innerHTML = '<option value="">caricamento...</option>';
+  // Popola dropdown tecnici (lista globale)
+  var selTec = document.getElementById('tr-tecnico');
+  if (selTec && selTec.tagName === 'SELECT') {
+    selTec.innerHTML = '<option value="">caricamento...</option>';
+  }
   try {
-    var d = await apiCall({action:'laboratori', sede:sedeDest});
-    var opts = '<option value="">— seleziona —</option>';
-    var labs = (d && d.dati && d.dati.length) ? d.dati : (typeof _LAB_FALLBACK !== 'undefined' ? _LAB_FALLBACK : []);
-    labs.forEach(function(l) { opts += '<option value="' + l + '">' + l + '</option>'; });
-    sel.innerHTML = opts;
+    // Carica laboratori e tecnici in parallelo
+    var promiseLab = apiCall({action:'laboratori', sede:sedeDest});
+    var promiseTec = apiCall({action:'tecnici'});
+    var dLab = await promiseLab;
+    var dTec = await promiseTec;
+    // Laboratori
+    var optsLab = '<option value="">— seleziona —</option>';
+    var labs = (dLab && dLab.dati && dLab.dati.length) ? dLab.dati :
+               (typeof _LAB_FALLBACK !== 'undefined' ? _LAB_FALLBACK : []);
+    labs.forEach(function(l) { optsLab += '<option value="' + l + '">' + l + '</option>'; });
+    sel.innerHTML = optsLab;
+    // Tecnici
+    if (selTec && selTec.tagName === 'SELECT') {
+      var optsTec = '<option value="">— seleziona —</option>';
+      var tecs = (dTec && dTec.dati && dTec.dati.length) ? dTec.dati :
+                 (typeof _TEC_FALLBACK !== 'undefined' ? _TEC_FALLBACK : []);
+      tecs.forEach(function(t) { optsTec += '<option value="' + t + '">' + t + '</option>'; });
+      selTec.innerHTML = optsTec;
+    }
   } catch(e) {
+    console.error('[Trasferimento] errore caricamento dropdown:', e);
     sel.innerHTML = '<option value="">errore caricamento</option>';
+    if (selTec && selTec.tagName === 'SELECT') {
+      var optsTec2 = '<option value="">— seleziona —</option>';
+      (typeof _TEC_FALLBACK !== 'undefined' ? _TEC_FALLBACK : []).forEach(function(t) {
+        optsTec2 += '<option value="' + t + '">' + t + '</option>';
+      });
+      selTec.innerHTML = optsTec2;
+    }
   }
   document.getElementById('tr-modal').style.display = 'flex';
 }
@@ -3192,7 +3219,18 @@ async function trConferma() {
     var p = dat.split('-');
     if (p.length === 3) dataIT = p[2] + '/' + p[1] + '/' + p[0];
   }
-  toast('Trasferimento in corso...', 'info');
+  // Anti doppio-invio: disabilita il bottone Trasferisci
+  var btnTr = document.querySelector('#tr-modal button[onclick="trConferma()"]');
+  if (btnTr && btnTr.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
+  if (btnTr) { btnTr.disabled = true; btnTr.style.opacity = '0.6'; }
+
+  // Overlay attesa (schermata blu come per gli altri inserimenti)
+  var ovP = document.querySelector('#overlayWait p');
+  var ovS = document.querySelector('#overlayWait small');
+  if (ovP) ovP.textContent = 'Registrazione trasferimento in corso...';
+  if (ovS) ovS.textContent = 'Attendere, non chiudere la pagina.';
+  mostraAttesa(true);
+
   try {
     var d = await apiCall({
       action:        'trasferimento',
@@ -3209,6 +3247,8 @@ async function trConferma() {
       tracciabilita: _trCaricoCorrente.tracc || 'NO',
       note:          note
     }, 60000);
+    mostraAttesa(false);
+    if (btnTr) { btnTr.disabled = false; btnTr.style.opacity = '1'; }
     if (d && d.ok) {
       toast('✓ Trasferimento registrato: ' + d.id, 'success');
       document.getElementById('tr-modal').style.display = 'none';
@@ -3218,6 +3258,8 @@ async function trConferma() {
       toast('Errore: ' + ((d && d.errore) || 'risposta non valida'), 'error');
     }
   } catch(e) {
+    mostraAttesa(false);
+    if (btnTr) { btnTr.disabled = false; btnTr.style.opacity = '1'; }
     toast('Errore connessione', 'error');
   }
 }
