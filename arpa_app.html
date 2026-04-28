@@ -1027,7 +1027,7 @@
 
 
 <!-- ═══════════════════════════ TRASFERIMENTO TRA SEDI ═════════════════════════ -->
-<div class="page" id="page-trasferimento" style="display:none;">
+<div class="page page-content" id="page-trasferimento">
   <div class="page-header">
     <button class="back-btn" onclick="showPage('page-home')" aria-label="Indietro">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -3122,7 +3122,9 @@ async function trCaricaCarichi() {
     window._trCarichiCache = {};
     d.dati.forEach(function(c){ window._trCarichiCache[c.idCarico] = c; });
   } catch(e) {
-    container.innerHTML = '<div style="text-align:center;padding:30px;color:#dc2626;">Errore connessione</div>';
+    console.error('[Trasferimento] errore:', e);
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:#dc2626;">' +
+      'Errore connessione: ' + (e.message || 'sconosciuto') + '</div>';
   }
 }
 
@@ -3201,7 +3203,13 @@ async function trConferma() {
 var _trShowPageOriginale = window.showPage;
 window.showPage = function(id) {
   _trShowPageOriginale(id);
-  if (id === 'page-trasferimento') trCaricaCarichi();
+  if (id === 'page-trasferimento') {
+    // Carica datalist tecnici per il modale di conferma
+    if (typeof _loadDatalist === 'function') {
+      _loadDatalist('list-tecnici', {action:'tecnici'}, _TEC_FALLBACK);
+    }
+    trCaricaCarichi();
+  }
 };
 
 </script>
