@@ -3154,32 +3154,39 @@ async function trCaricaCarichi() {
   }
 }
 
-async function trSelezionaCarico(idCarico) {
+function trSelezionaCarico(idCarico) {
   var c = (window._trCarichiCache || {})[idCarico];
   if (!c) return;
   _trCaricoCorrente = c;
   var sedeDest = _trGetSedeDest();
-  // Pre-compila il modale
+
+  // Pre-compila i campi statici e MOSTRA SUBITO il modale
+  document.getElementById('tr-quantita').value = c.qtaResidua;
+  document.getElementById('tr-quantita').max   = c.qtaResidua;
+  document.getElementById('tr-data').value     = new Date().toISOString().substring(0,10);
+  document.getElementById('tr-note').value     = '';
   document.getElementById('tr-modal-info').innerHTML =
     '<strong>' + c.articolo + '</strong><br>' +
     'Carico: ' + c.idCarico + '<br>' +
     'Da <strong>' + currentSede + '</strong> a <strong>' + sedeDest + '</strong><br>' +
     'Disponibile: ' + c.qtaResidua + ' ' + (c.udm || 'pz');
-  document.getElementById('tr-quantita').value = c.qtaResidua;
-  document.getElementById('tr-quantita').max   = c.qtaResidua;
-  document.getElementById('tr-tecnico').value  = '';
-  document.getElementById('tr-data').value     = new Date().toISOString().substring(0,10);
-  document.getElementById('tr-note').value     = '';
-  // Popola dropdown laboratori della SEDE DI DESTINAZIONE
+  // Reset dropdown e mostra subito il modale (UX immediata)
   var sel = document.getElementById('tr-lab');
   sel.innerHTML = '<option value="">caricamento...</option>';
-  // Popola dropdown tecnici (lista globale)
   var selTec = document.getElementById('tr-tecnico');
   if (selTec && selTec.tagName === 'SELECT') {
     selTec.innerHTML = '<option value="">caricamento...</option>';
   }
+  document.getElementById('tr-modal').style.display = 'flex';
+
+  // Popola i dropdown in background (non blocca la UI)
+  _trPopolaDropdown(sedeDest);
+}
+
+async function _trPopolaDropdown(sedeDest) {
+  var sel    = document.getElementById('tr-lab');
+  var selTec = document.getElementById('tr-tecnico');
   try {
-    // Carica laboratori e tecnici in parallelo
     var promiseLab = apiCall({action:'laboratori', sede:sedeDest});
     var promiseTec = apiCall({action:'tecnici'});
     var dLab = await promiseLab;
@@ -3209,7 +3216,6 @@ async function trSelezionaCarico(idCarico) {
       selTec.innerHTML = optsTec2;
     }
   }
-  document.getElementById('tr-modal').style.display = 'flex';
 }
 
 function trAnnulla() {
@@ -3242,10 +3248,14 @@ async function trConferma() {
   if (btnTr && btnTr.disabled) { toast('Invio già in corso, attendi...', 'info'); return; }
   if (btnTr) { btnTr.disabled = true; btnTr.style.opacity = '0.6'; }
 
+  // Chiudi il modale di conferma PRIMA di mostrare l'overlay
+  // (altrimenti i due backdrop si sovrappongono e l'overlay appare nero)
+  document.getElementById('tr-modal').style.display = 'none';
+
   // Overlay attesa (schermata blu come per gli altri inserimenti)
   var ovP = document.querySelector('#overlayWait p');
   var ovS = document.querySelector('#overlayWait small');
-  if (ovP) ovP.textContent = 'Registrazione trasferimento in corso...';
+  if (ovP) ovP.textContent = 'Registrazione TRASFERIMENTO in corso...';
   if (ovS) ovS.textContent = 'Attendere, non chiudere la pagina.';
   mostraAttesa(true);
 
@@ -3274,15 +3284,17 @@ async function trConferma() {
         msg += ' — ' + d.idScarico + ' / ' + d.idCarico;
       }
       toast(msg, 'success');
-      document.getElementById('tr-modal').style.display = 'none';
+      // (modale già chiuso prima dell'overlay)
       _trCaricoCorrente = null;
       trCaricaCarichi(); // ricarica la lista
     } else {
+      document.getElementById('tr-modal').style.display = 'flex'; // riapri per correggere
       toast('Errore: ' + ((d && d.errore) || 'risposta non valida'), 'error');
     }
   } catch(e) {
     mostraAttesa(false);
     if (btnTr) { btnTr.disabled = false; btnTr.style.opacity = '1'; }
+    document.getElementById('tr-modal').style.display = 'flex'; // riapri per correggere
     toast('Errore connessione', 'error');
   }
 }
