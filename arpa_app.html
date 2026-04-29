@@ -1855,7 +1855,13 @@ var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARP
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
 
-var currentSede    = 'CB';
+var currentSede    = (function() {
+  // Legge l'ultima sede selezionata dall'utente, default CB
+  try {
+    var s = localStorage.getItem('currentSede');
+    return (s === 'CB' || s === 'IS') ? s : 'CB';
+  } catch(e) { return 'CB'; }
+})();
 var regTipoFilter  = 'ALL';
 var ordStatoFilter = 'ALL';
 var giacFilter     = 'ALL';
@@ -2047,6 +2053,8 @@ async function setSede(s) {
   _clearLottiScarico();
 
   currentSede = s;
+  // Persisti la sede selezionata per le prossime sessioni
+  try { localStorage.setItem('currentSede', s); } catch(e) {}
   _dataOrdini = []; // svuota cache ordini — la nuova sede la ricarica subito
   document.getElementById('btnCB').classList.toggle('active', s === 'CB');
   document.getElementById('btnIS').classList.toggle('active', s === 'IS');
@@ -3070,11 +3078,11 @@ function _initSede(s) {
     if (lb) lb.textContent = s;
   });
 }
-_initSede('CB');
-currentSede = 'CB';
-document.getElementById('btnCB').classList.add('active');
-document.getElementById('btnIS').classList.remove('active');
-document.getElementById('userBadge').textContent = 'CB';
+// Usa la sede salvata (o CB se non c'è cronologia)
+_initSede(currentSede);
+document.getElementById('btnCB').classList.toggle('active', currentSede === 'CB');
+document.getElementById('btnIS').classList.toggle('active', currentSede === 'IS');
+document.getElementById('userBadge').textContent = currentSede;
 loadHomeStats();
 
 // ══════════════════════════════════════════════════════════
