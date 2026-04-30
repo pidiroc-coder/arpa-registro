@@ -665,7 +665,7 @@
     <div class="field">
       <label>Codice Articolo <span class="req">*</span></label>
       <div class="ssel-wrap" id="car-articolo-wrap">
-        <input type="text" class="ssel-input" id="car-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('car-articolo')" onfocus="ssel_open('car-articolo')">
+        <input type="text" class="ssel-input" id="car-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('car-articolo')" onfocus="ssel_open('car-articolo')" onblur="ssel_blur('car-articolo')">
         <button type="button" class="ssel-clear" id="car-articolo-clear" onclick="ssel_clear('car-articolo')">×</button>
         <div class="ssel-dropdown" id="car-articolo-dropdown"></div>
         <select id="car-articolo" style="display:none;" onchange="onArticoloSelezionato()"><option value="">— seleziona o scansiona —</option></select>
@@ -782,7 +782,7 @@
     <div class="field">
       <label>Prodotto da Aprire <span class="req">*</span></label>
       <div class="ssel-wrap" id="ape-articolo-wrap">
-        <input type="text" class="ssel-input" id="ape-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('ape-articolo')" onfocus="ssel_open('ape-articolo')">
+        <input type="text" class="ssel-input" id="ape-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('ape-articolo')" onfocus="ssel_open('ape-articolo')" onblur="ssel_blur('ape-articolo')">
         <button type="button" class="ssel-clear" id="ape-articolo-clear" onclick="ssel_clear('ape-articolo')">×</button>
         <div class="ssel-dropdown" id="ape-articolo-dropdown"></div>
         <select id="ape-articolo" style="display:none;" onchange="onArticoloAperturaSelezionato()"><option value="">— seleziona prodotto —</option></select>
@@ -852,7 +852,7 @@
     <div class="field">
       <label>Prodotto da Scaricare <span class="req">*</span></label>
       <div class="ssel-wrap" id="sca-articolo-wrap">
-        <input type="text" class="ssel-input" id="sca-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('sca-articolo')" onfocus="ssel_open('sca-articolo')">
+        <input type="text" class="ssel-input" id="sca-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('sca-articolo')" onfocus="ssel_open('sca-articolo')" onblur="ssel_blur('sca-articolo')">
         <button type="button" class="ssel-clear" id="sca-articolo-clear" onclick="ssel_clear('sca-articolo')">×</button>
         <div class="ssel-dropdown" id="sca-articolo-dropdown"></div>
         <select id="sca-articolo" style="display:none;" onchange="caricaLottiScarico()"><option value="">— seleziona prodotto —</option></select>
@@ -1213,9 +1213,34 @@
 // ══════════════════════════════════════════════════════════
 
 function ssel_open(baseId) {
-  ssel_filter(baseId); // popola la lista
+  // Al focus mostra SEMPRE tutta la lista (anche se l'input ha un valore selezionato)
+  // Così l'utente può scorrere come una dropdown normale e cambiare scelta
+  var inp = document.getElementById(baseId + '-search');
+  if (inp && inp.value) {
+    // Salva il valore in attributo temporaneo (ripristinato se utente non sceglie)
+    inp.setAttribute('data-prev-val', inp.value);
+    inp.value = '';
+    var clr = document.getElementById(baseId + '-clear');
+    if (clr) clr.classList.remove('show');
+  }
+  ssel_filter(baseId); // popola la lista (vuota = tutti i risultati)
   var dd = document.getElementById(baseId + '-dropdown');
   if (dd) dd.classList.add('show');
+}
+
+// Quando l'input perde il focus SENZA aver selezionato nulla, ripristina il valore precedente
+function ssel_blur(baseId) {
+  setTimeout(function() {
+    var inp = document.getElementById(baseId + '-search');
+    var sel = document.getElementById(baseId);
+    if (!inp || !sel) return;
+    // Se non ha valore corrente E aveva un valore precedente E il select ha ancora quel valore
+    if (!inp.value && inp.getAttribute('data-prev-val') && sel.value) {
+      // Ripristina dal select
+      ssel_sync(baseId);
+    }
+    inp.removeAttribute('data-prev-val');
+  }, 200); // delay per permettere il click su un item della dropdown
 }
 
 function ssel_close(baseId) {
@@ -2734,6 +2759,8 @@ async function onOrdineSelezionato(ordineId) {
   } else {
     selArt.innerHTML = '<option value="">Nessun prodotto per questo ordine</option>';
   }
+  // Sincronizza l'input di ricerca con le nuove opzioni
+  ssel_sync('car-articolo');
 }
 
 // Autocompila UDM, CONTO, GRUPPO, FORNITORE quando si seleziona l'articolo
@@ -2784,8 +2811,6 @@ async function loadArticoliSelect(selId) {
   }
   sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
     if (d && d.ok) {
-      // Sincronizza l'input di ricerca dopo il caricamento delle opzioni
-      setTimeout(function(){ ssel_sync(selId); }, 0);
       var items = d.dati || [];
       var visti = {};
       items.forEach(function(g) {
@@ -2824,6 +2849,8 @@ async function loadArticoliSelect(selId) {
         }
         sel.appendChild(opt);
       });
+      // Sincronizza l'input di ricerca DOPO che le opzioni sono state aggiunte
+      ssel_sync(selId);
     }
 }
 
