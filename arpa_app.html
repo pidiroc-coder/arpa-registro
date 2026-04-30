@@ -371,6 +371,91 @@
     font-weight: 500;
   }
 
+
+  /* ═══════════════════════════ SEARCHABLE SELECT ═════════════════════════ */
+  .ssel-wrap { position: relative; }
+  .ssel-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-sizing: border-box;
+  }
+  .ssel-input:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 2px rgba(30,64,175,0.15);
+  }
+  .ssel-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1;
+    display: none;
+  }
+  .ssel-clear.show { display: block; }
+  .ssel-clear:active { background: #cbd5e1; }
+  .ssel-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 100;
+    display: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ssel-dropdown.show { display: block; }
+  .ssel-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .ssel-item:last-child { border-bottom: none; }
+  .ssel-item:hover, .ssel-item.active {
+    background: #eff6ff;
+    color: #1e40af;
+  }
+  .ssel-item-meta {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+  .ssel-item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .ssel-empty {
+    padding: 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+  }
+  .ssel-mark {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 0 1px;
+    border-radius: 2px;
+  }
+
 </style>
 </head>
 <body>
@@ -579,7 +664,12 @@
     </div>
     <div class="field">
       <label>Codice Articolo <span class="req">*</span></label>
-      <select id="car-articolo" onchange="onArticoloSelezionato()"><option value="">— seleziona o scansiona —</option></select>
+      <div class="ssel-wrap" id="car-articolo-wrap">
+        <input type="text" class="ssel-input" id="car-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('car-articolo')" onfocus="ssel_open('car-articolo')">
+        <button type="button" class="ssel-clear" id="car-articolo-clear" onclick="ssel_clear('car-articolo')">×</button>
+        <div class="ssel-dropdown" id="car-articolo-dropdown"></div>
+        <select id="car-articolo" style="display:none;" onchange="onArticoloSelezionato()"><option value="">— seleziona o scansiona —</option></select>
+      </div>
     </div>
     <div class="field-row">
       <div class="field field-auto">
@@ -691,7 +781,12 @@
     </div>
     <div class="field">
       <label>Prodotto da Aprire <span class="req">*</span></label>
-      <select id="ape-articolo" onchange="onArticoloAperturaSelezionato()"><option value="">— seleziona prodotto con giacenza —</option></select>
+      <div class="ssel-wrap" id="ape-articolo-wrap">
+        <input type="text" class="ssel-input" id="ape-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('ape-articolo')" onfocus="ssel_open('ape-articolo')">
+        <button type="button" class="ssel-clear" id="ape-articolo-clear" onclick="ssel_clear('ape-articolo')">×</button>
+        <div class="ssel-dropdown" id="ape-articolo-dropdown"></div>
+        <select id="ape-articolo" style="display:none;" onchange="onArticoloAperturaSelezionato()"><option value="">— seleziona prodotto —</option></select>
+      </div>
     </div>
     <div class="field-row">
       <div class="field field-auto">
@@ -756,7 +851,12 @@
     </div>
     <div class="field">
       <label>Prodotto da Scaricare <span class="req">*</span></label>
-      <select id="sca-articolo" onchange="caricaLottiScarico()"><option value="">— seleziona prodotto —</option></select>
+      <div class="ssel-wrap" id="sca-articolo-wrap">
+        <input type="text" class="ssel-input" id="sca-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('sca-articolo')" onfocus="ssel_open('sca-articolo')">
+        <button type="button" class="ssel-clear" id="sca-articolo-clear" onclick="ssel_clear('sca-articolo')">×</button>
+        <div class="ssel-dropdown" id="sca-articolo-dropdown"></div>
+        <select id="sca-articolo" style="display:none;" onchange="caricaLottiScarico()"><option value="">— seleziona prodotto —</option></select>
+      </div>
     </div>
     <div class="field-row">
       <div class="field field-auto">
@@ -1102,6 +1202,156 @@
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════
+// SEARCHABLE SELECT (ricerca filtrata per dropdown articoli)
+// ══════════════════════════════════════════════════════════
+// Trasforma un <select> in un componente di ricerca con
+// filtro testuale in tempo reale su codice + descrizione.
+// L'input e il select sono linkati: quando l'utente seleziona
+// un risultato dal dropdown, il valore viene scritto nel <select>
+// e viene scatenato il suo evento change (per compatibilità).
+// ══════════════════════════════════════════════════════════
+
+function ssel_open(baseId) {
+  ssel_filter(baseId); // popola la lista
+  var dd = document.getElementById(baseId + '-dropdown');
+  if (dd) dd.classList.add('show');
+}
+
+function ssel_close(baseId) {
+  var dd = document.getElementById(baseId + '-dropdown');
+  if (dd) dd.classList.remove('show');
+}
+
+function ssel_clear(baseId) {
+  var inp = document.getElementById(baseId + '-search');
+  var sel = document.getElementById(baseId);
+  var clr = document.getElementById(baseId + '-clear');
+  if (inp) inp.value = '';
+  if (sel) {
+    sel.value = '';
+    sel.dispatchEvent(new Event('change'));
+  ssel_sync(selId);
+  }
+  if (clr) clr.classList.remove('show');
+  ssel_close(baseId);
+  if (inp) inp.focus();
+}
+
+function ssel_filter(baseId) {
+  var inp = document.getElementById(baseId + '-search');
+  var sel = document.getElementById(baseId);
+  var dd  = document.getElementById(baseId + '-dropdown');
+  var clr = document.getElementById(baseId + '-clear');
+  if (!inp || !sel || !dd) return;
+
+  var q = (inp.value || '').trim().toLowerCase();
+  if (clr) clr.classList.toggle('show', q.length > 0);
+
+  // Costruisci lista da <option> del select
+  var opts = [];
+  for (var i = 0; i < sel.options.length; i++) {
+    var o = sel.options[i];
+    if (!o.value) continue; // salta placeholder
+    var label = o.text || o.value;
+    if (q && label.toLowerCase().indexOf(q) === -1) continue;
+    opts.push({ val: o.value, text: label });
+  }
+
+  if (opts.length === 0) {
+    if (sel.options.length <= 1) {
+      dd.innerHTML = '<div class="ssel-empty">Nessun prodotto disponibile</div>';
+    } else {
+      dd.innerHTML = '<div class="ssel-empty">Nessun risultato per "' + _escapeHtml(q) + '"</div>';
+    }
+    dd.classList.add('show');
+    return;
+  }
+
+  // Mostra tutti i risultati (come sul foglio Google)
+  var html = '';
+  for (var k = 0; k < opts.length; k++) {
+    var item = opts[k];
+    // Estrai codice e descrizione (formato: "20240470 - DESCRIZIONE — meta")
+    var parts = item.text.split(' — ');
+    var main = parts[0];
+    var meta = parts.slice(1).join(' — ');
+    var mainHtml = q ? _ssel_highlight(main, q) : _escapeHtml(main);
+    html += '<div class="ssel-item" onclick="ssel_select(\'' + baseId + '\', \'' +
+            _escapeJs(item.val) + '\')">' +
+            mainHtml +
+            (meta ? '<div class="ssel-item-meta">' + _escapeHtml(meta) + '</div>' : '') +
+            '</div>';
+  }
+  dd.innerHTML = html;
+  dd.classList.add('show');
+}
+
+function ssel_select(baseId, val) {
+  var inp = document.getElementById(baseId + '-search');
+  var sel = document.getElementById(baseId);
+  var clr = document.getElementById(baseId + '-clear');
+  if (!sel) return;
+  // Trova il testo dell'option selezionata
+  var optText = val;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === val) { optText = sel.options[i].text; break; }
+  }
+  if (inp) inp.value = optText;
+  if (clr) clr.classList.add('show');
+  sel.value = val;
+  sel.dispatchEvent(new Event('change'));
+  ssel_close(baseId);
+}
+
+function _ssel_highlight(text, query) {
+  var idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return _escapeHtml(text);
+  return _escapeHtml(text.substring(0, idx)) +
+         '<span class="ssel-mark">' + _escapeHtml(text.substr(idx, query.length)) + '</span>' +
+         _escapeHtml(text.substring(idx + query.length));
+}
+
+function _escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c];
+  });
+}
+function _escapeJs(s) {
+  return String(s || '').replace(/['\\]/g, '\\$&');
+}
+
+// Chiudi il dropdown se l'utente clicca fuori
+document.addEventListener('click', function(e) {
+  ['car-articolo','ape-articolo','sca-articolo'].forEach(function(id) {
+    var wrap = document.getElementById(id + '-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      ssel_close(id);
+    }
+  });
+});
+
+// Quando un select viene popolato dall'API, aggiorna anche il search input
+// (per casi in cui il valore viene impostato programmaticamente, es. da barcode)
+function ssel_sync(baseId) {
+  var sel = document.getElementById(baseId);
+  var inp = document.getElementById(baseId + '-search');
+  var clr = document.getElementById(baseId + '-clear');
+  if (!sel || !inp) return;
+  if (sel.value) {
+    var t = sel.value;
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === sel.value) { t = sel.options[i].text; break; }
+    }
+    inp.value = t;
+    if (clr) clr.classList.add('show');
+  } else {
+    inp.value = '';
+    if (clr) clr.classList.remove('show');
+  }
+}
+
+
 // ══════════════════════════════════════════════════════════
 // SCHERMATA PIN DI ACCESSO (via API)
 // ══════════════════════════════════════════════════════════
@@ -2534,6 +2784,8 @@ async function loadArticoliSelect(selId) {
   }
   sel.innerHTML = '<option value="">— seleziona prodotto —</option>';
     if (d && d.ok) {
+      // Sincronizza l'input di ricerca dopo il caricamento delle opzioni
+      setTimeout(function(){ ssel_sync(selId); }, 0);
       var items = d.dati || [];
       var visti = {};
       items.forEach(function(g) {
