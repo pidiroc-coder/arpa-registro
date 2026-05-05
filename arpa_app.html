@@ -2253,7 +2253,17 @@ function showForm(tipo) {
     document.getElementById('car-data').value = (typeof oggiIso !== 'undefined' ? oggiIso : new Date().toISOString().slice(0,10));
     svuotaForm('carico');
     loadOrdiniSelect('car-ordine');
-    loadArticoliSelect('car-articolo');
+    // NON carichiamo articoli all'apertura: la lista si popola SOLO dopo
+    // selezione di un ordine, perchè i carichi sono sempre legati a un ordine.
+    var selCarArt = document.getElementById('car-articolo');
+    if (selCarArt) selCarArt.innerHTML = '<option value="">— seleziona prima un ordine —</option>';
+    var inpCarSearch = document.getElementById('car-articolo-search');
+    if (inpCarSearch) {
+      inpCarSearch.value = '';
+      inpCarSearch.placeholder = '↑ Seleziona un ordine sopra per vedere i prodotti';
+    }
+    var clrCar = document.getElementById('car-articolo-clear');
+    if (clrCar) clrCar.classList.remove('show');
     showPage('page-form-carico');
   } else if (tipo === 'apertura') {
     document.getElementById('ape-sede').value = currentSede;
@@ -2763,15 +2773,36 @@ async function loadOrdiniSelect(selId) {
 // Carica i prodotti di quell'ordine e svuota i campi dipendenti
 async function onOrdineSelezionato(ordineId) {
   var selArt = document.getElementById('car-articolo');
-  selArt.innerHTML = '<option value="">caricamento prodotti...</option>';
+  var inpSearch = document.getElementById('car-articolo-search');
+  var clrBtn    = document.getElementById('car-articolo-clear');
+
+  // Reset campi auto associati all'articolo
   ['car-udm','car-conto','car-gruppo','car-fornit'].forEach(function(id) {
-    document.getElementById(id).value = '';
+    var el = document.getElementById(id);
+    if (el) el.value = '';
   });
+  if (clrBtn) clrBtn.classList.remove('show');
+  if (inpSearch) inpSearch.value = '';
+
+  // CASO 1: nessun ordine selezionato → placeholder iniziale "seleziona ordine"
   if (!ordineId) {
-    loadArticoliSelect('car-articolo');
+    selArt.innerHTML = '<option value="">— seleziona prima un ordine —</option>';
+    if (inpSearch) {
+      inpSearch.placeholder = '↑ Seleziona un ordine sopra per vedere i prodotti';
+    }
     return;
   }
+
+  // CASO 2: ordine selezionato → mostra "caricamento" durante fetch API
+  selArt.innerHTML = '<option value="">caricamento prodotti...</option>';
+  if (inpSearch) {
+    inpSearch.placeholder = '⏳ caricamento prodotti dell\'ordine...';
+  }
+
+  // Fetch dei prodotti dell'ordine
   var d = await apiCall({action: 'prodotti_ordine', sede: currentSede, ordine: ordineId});
+
+  // Popola il select con i soli prodotti dell'ordine
   selArt.innerHTML = '<option value="">— seleziona prodotto —</option>';
   if (d && d.ok && d.dati && d.dati.length) {
     d.dati.forEach(function(p) {
@@ -2785,10 +2816,18 @@ async function onOrdineSelezionato(ordineId) {
       opt.setAttribute('data-fornit', p.fornitore || '');
       selArt.appendChild(opt);
     });
+    // Caricamento riuscito: aggiorna placeholder per la ricerca
+    if (inpSearch) {
+      inpSearch.placeholder = '🔎 cerca per codice o nome...';
+    }
   } else {
     selArt.innerHTML = '<option value="">Nessun prodotto per questo ordine</option>';
+    if (inpSearch) {
+      inpSearch.placeholder = 'Nessun prodotto per questo ordine';
+    }
   }
-  // Sincronizza l'input di ricerca con le nuove opzioni
+
+  // Sincronizza il select nascosto con il searchable input (ssel)
   ssel_sync('car-articolo');
 }
 
