@@ -665,7 +665,7 @@
     <div class="field">
       <label>Codice Articolo <span class="req">*</span></label>
       <div class="ssel-wrap" id="car-articolo-wrap">
-        <input type="text" class="ssel-input" id="car-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('car-articolo')" onfocus="ssel_open('car-articolo')" onblur="ssel_blur('car-articolo')">
+        <input type="text" class="ssel-input" id="car-articolo-search" placeholder="⏳ caricamento prodotti..." autocomplete="off" oninput="ssel_filter('car-articolo')" onfocus="ssel_open('car-articolo')" onblur="ssel_blur('car-articolo')">
         <button type="button" class="ssel-clear" id="car-articolo-clear" onclick="ssel_clear('car-articolo')">×</button>
         <div class="ssel-dropdown" id="car-articolo-dropdown"></div>
         <select id="car-articolo" style="display:none;" onchange="onArticoloSelezionato()"><option value="">— seleziona o scansiona —</option></select>
@@ -782,7 +782,7 @@
     <div class="field">
       <label>Prodotto da Aprire <span class="req">*</span></label>
       <div class="ssel-wrap" id="ape-articolo-wrap">
-        <input type="text" class="ssel-input" id="ape-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('ape-articolo')" onfocus="ssel_open('ape-articolo')" onblur="ssel_blur('ape-articolo')">
+        <input type="text" class="ssel-input" id="ape-articolo-search" placeholder="⏳ caricamento prodotti..." autocomplete="off" oninput="ssel_filter('ape-articolo')" onfocus="ssel_open('ape-articolo')" onblur="ssel_blur('ape-articolo')">
         <button type="button" class="ssel-clear" id="ape-articolo-clear" onclick="ssel_clear('ape-articolo')">×</button>
         <div class="ssel-dropdown" id="ape-articolo-dropdown"></div>
         <select id="ape-articolo" style="display:none;" onchange="onArticoloAperturaSelezionato()"><option value="">— seleziona prodotto —</option></select>
@@ -852,7 +852,7 @@
     <div class="field">
       <label>Prodotto da Scaricare <span class="req">*</span></label>
       <div class="ssel-wrap" id="sca-articolo-wrap">
-        <input type="text" class="ssel-input" id="sca-articolo-search" placeholder="🔎 cerca per codice o nome..." autocomplete="off" oninput="ssel_filter('sca-articolo')" onfocus="ssel_open('sca-articolo')" onblur="ssel_blur('sca-articolo')">
+        <input type="text" class="ssel-input" id="sca-articolo-search" placeholder="⏳ caricamento prodotti..." autocomplete="off" oninput="ssel_filter('sca-articolo')" onfocus="ssel_open('sca-articolo')" onblur="ssel_blur('sca-articolo')">
         <button type="button" class="ssel-clear" id="sca-articolo-clear" onclick="ssel_clear('sca-articolo')">×</button>
         <div class="ssel-dropdown" id="sca-articolo-dropdown"></div>
         <select id="sca-articolo" style="display:none;" onchange="caricaLottiScarico()"><option value="">— seleziona prodotto —</option></select>
@@ -867,6 +867,11 @@
       <div class="field field-auto">
         <label>Tracciabilità</label>
         <input type="text" id="sca-tracc" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
+      <div class="field field-auto">
+        <label>UDM</label>
+        <input type="text" id="sca-udm" readonly>
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -1363,10 +1368,21 @@ function ssel_sync(baseId) {
   var inp = document.getElementById(baseId + '-search');
   var clr = document.getElementById(baseId + '-clear');
   if (!sel || !inp) return;
+  // Una volta che il select ha opzioni reali (più del solo placeholder),
+  // aggiorna il placeholder dell'input al testo "cerca per codice o nome..."
+  // Conta le option utili (skip il primo se è placeholder con value vuoto)
+  var hasItems = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value) { hasItems = true; break; }
+  }
+  if (hasItems) {
+    inp.placeholder = '🔎 cerca per codice o nome...';
+  }
+  // Sincronizza il valore visibile con la selezione
   if (sel.value) {
     var t = sel.value;
-    for (var i = 0; i < sel.options.length; i++) {
-      if (sel.options[i].value === sel.value) { t = sel.options[i].text; break; }
+    for (var j = 0; j < sel.options.length; j++) {
+      if (sel.options[j].value === sel.value) { t = sel.options[j].text; break; }
     }
     inp.value = t;
     if (clr) clr.classList.add('show');
@@ -1374,6 +1390,19 @@ function ssel_sync(baseId) {
     inp.value = '';
     if (clr) clr.classList.remove('show');
   }
+}
+
+// Ripristina placeholder "caricamento..." prima di una nuova chiamata loadArticoliSelect
+function ssel_resetLoading(baseId) {
+  var inp = document.getElementById(baseId + '-search');
+  if (inp) {
+    inp.placeholder = '⏳ caricamento prodotti...';
+    inp.value = '';
+  }
+  var sel = document.getElementById(baseId);
+  if (sel) sel.innerHTML = '<option value="">' + (sel.options[0] ? sel.options[0].text : '') + '</option>';
+  var clr = document.getElementById(baseId + '-clear');
+  if (clr) clr.classList.remove('show');
 }
 
 
@@ -2875,15 +2904,19 @@ function toggleLottoFields(tipo) {
 function caricaLottiScarico() {
   var sel = document.getElementById('sca-articolo');
   var opt = sel.options[sel.selectedIndex];
+  var udmEl = document.getElementById('sca-udm');
   if (!opt || !opt.value) {
     document.getElementById('sca-lotto').value = '';
     document.getElementById('sca-tracc').value = '';
+    if (udmEl) udmEl.value = '';
     _clearLottiScarico();
     return;
   }
   var lottiStr = opt.getAttribute('data-lotti');
   var tracc    = opt.getAttribute('data-tracc') || 'NO';
+  var udm      = opt.getAttribute('data-udm')   || '';
   document.getElementById('sca-tracc').value = tracc;
+  if (udmEl) udmEl.value = udm;
 
   if (!lottiStr) {
     document.getElementById('sca-lotto').value = 'N/A';
