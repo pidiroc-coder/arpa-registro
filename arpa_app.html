@@ -799,6 +799,11 @@
         <input type="text" id="ape-scad" readonly>
         <span class="auto-tag">auto</span>
       </div>
+      <div class="field field-auto">
+        <label>UDM</label>
+        <input type="text" id="ape-udm" readonly>
+        <span class="auto-tag">auto</span>
+      </div>
     </div>
     
   </div>
@@ -1970,6 +1975,7 @@ function _cmBuildRighe(ordine, articoliPreSel) {
     if (rim <= 0 && !(preSelMap && preSelMap[pr.articolo.toUpperCase()])) return;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
     var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
+    var udmRow = pr.udm || ana.udm || '';
     var div = document.createElement('div');
     div.className = 'cm-riga card';
     div.dataset.idx = idx;
@@ -1984,7 +1990,7 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       : (rim > 0);
 
     var badge = rim > 0
-      ? '<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">da caricare: '+rim+'</span>'
+      ? '<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">da caricare: '+rim+(udmRow?' '+udmRow:'')+'</span>'
       : '<span style="background:#f1f5f9;color:#64748b;font-size:11px;padding:2px 7px;border-radius:10px;margin-left:6px;">evaso</span>';
 
     div.innerHTML = [
@@ -2002,7 +2008,7 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       '<div class="cm-fields" style="'+(checked?'':'display:none')+'">',
       '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
       '    <div class="field" style="margin:0;">',
-      '      <label style="font-size:12px;">Quantità</label>',
+      '      <label style="font-size:12px;">Quantità' + (udmRow ? ' (' + udmRow + ')' : '') + '</label>',
       '      <input type="number" class="cm-qta" value="'+(rim>0?rim:'')+'" min="0.01" step="any">',
       '    </div>',
       '    <div class="field" style="margin:0;">',
@@ -2154,7 +2160,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxkJFxUiKKcnxlxXPBFaetTaB2UqkBASx_CFnYSDt-gIg0bzTdeMGmWjlnO3Irxcia1Rw/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzf5gMwzeRGByLBEGRDcAyyb4YrbafZyBOTAIUmaESudsaBcgX6qFHN3k2221wby5ROVw/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -2836,16 +2842,20 @@ async function onOrdineSelezionato(ordineId) {
 function onArticoloAperturaSelezionato() {
   var sel = document.getElementById('ape-articolo');
   var opt = sel.options[sel.selectedIndex];
+  var udmEl = document.getElementById('ape-udm');
   if (!opt || !opt.value) {
     document.getElementById('ape-lotto').value = '';
     document.getElementById('ape-scad').value  = '';
+    if (udmEl) udmEl.value = '';
     return;
   }
   // Lotto FEFO: primo lotto dalla lista dati memorizzati nell'opzione
   var lotto = opt.getAttribute('data-lotto') || '';
   var scad  = opt.getAttribute('data-scad')  || '';
+  var udm   = opt.getAttribute('data-udm')   || '';
   document.getElementById('ape-lotto').value = lotto || '';
   document.getElementById('ape-scad').value  = scad  || '';
+  if (udmEl) udmEl.value = udm;
   // Collocazione: non autocompilata (P5 - utente deve selezionare)
 }
 
@@ -2889,10 +2899,14 @@ async function loadArticoliSelect(selId) {
         opt.value = art;
         var giac = g.giacenza;
         if (isApe) {
-          opt.text = art + ' — da aprire: ' + giac;
+          opt.text = art + ' — da aprire: ' + giac + (g.udm ? ' ' + g.udm : '');
+          opt.setAttribute('data-udm', g.udm || '');
         } else if (isSca) {
           opt.text = art + ' — giac: ' + giac
+            + (g.udm ? ' ' + g.udm : '')
             + (g.tracciabilita ? ' | ' + g.tracciabilita : '');
+          // Memorizza UDM per autocompilazione
+          opt.setAttribute('data-udm', g.udm || '');
           // Memorizza lotti per selezione successiva
           if (g.lotti && g.lotti.length > 0) {
             opt.setAttribute('data-lotti', JSON.stringify(g.lotti));
