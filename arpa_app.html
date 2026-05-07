@@ -2229,15 +2229,18 @@ function showPage(id) {
     var annoEl = document.getElementById('no-anno');
     if (annoEl && !annoEl.value) annoEl.value = new Date().getFullYear();
     // Fornitori: popola datalist dai dati ordini già caricati
+    // FIX: carica TUTTA la lista fornitori dal foglio FORNITORI via API
+    // (prima usava solo i fornitori già presenti negli ordini → lista parziale)
     var dlForn = document.getElementById('list-fornitori');
     if (dlForn) {
-      var fornSet = {};
+      // Fallback istantaneo: usa quelli già presenti negli ordini, mentre attende l'API
+      var fornSetTmp = {};
       (_dataOrdini || []).forEach(function(o) {
-        (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSet[p.fornitore] = true; });
-        if (o.fornitore) fornSet[o.fornitore] = true;
+        (o.prodotti || []).forEach(function(p) { if (p.fornitore) fornSetTmp[p.fornitore] = true; });
+        if (o.fornitore) fornSetTmp[o.fornitore] = true;
       });
-      var fornLista = Object.keys(fornSet).sort();
-      if (fornLista.length) dlForn.innerHTML = fornLista.map(function(v){ return '<option value="'+v+'">'; }).join('');
+      var fornFallback = Object.keys(fornSetTmp).sort();
+      _loadDatalist('list-fornitori', {action:'fornitori'}, fornFallback);
     }
     // Popola datalist articoli condiviso (come list-fornitori)
     _noRefreshArtDl();
