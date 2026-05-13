@@ -456,6 +456,25 @@
     border-radius: 2px;
   }
 
+
+  /* Tag "auto" piccolo nei campi del carico multiplo - non copre il valore */
+  .cm-auto .cm-auto-tag {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    pointer-events: none;
+    line-height: 1.1;
+    font-weight: 500;
+  }
+  .cm-auto input {
+    width: 100%;
+    box-sizing: border-box;
+  }
 </style>
 </head>
 <body>
@@ -2015,27 +2034,23 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       '</div>',
       // Mostra i campi se checkbox è spuntata (pre-selezionato o rimanente>0)
       '<div class="cm-fields" style="'+(checked?'':'display:none')+'">',
-      // Riga 1: campi AUTO (UDM, Conto, Gruppo, Fornitore) - identici al carico singolo
-      '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px;background:#f8fafc;padding:8px;border-radius:6px;">',
-      '    <div class="field field-auto" style="margin:0;">',
+      // Riga 1: campi AUTO (UDM, Conto, Gruppo) - Fornitore omesso perché già nell\'header dell\'ordine
+      // Layout 3 colonne con caratteri compatti per evitare troncamento
+      '  <div style="display:grid;grid-template-columns:1fr 1.4fr 1.4fr;gap:6px;margin-bottom:8px;background:#f8fafc;padding:8px;border-radius:6px;">',
+      '    <div class="field field-auto cm-auto" style="margin:0;position:relative;">',
       '      <label style="font-size:11px;">UDM</label>',
-      '      <input type="text" class="cm-udm" value="' + _escAttr(udmRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
-      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '      <input type="text" class="cm-udm" value="' + _escAttr(udmRow) + '" readonly title="' + _escAttr(udmRow) + '" style="background:#f1f5f9;font-size:12px;padding-right:36px;text-overflow:ellipsis;">',
+      '      <span class="auto-tag cm-auto-tag">auto</span>',
       '    </div>',
-      '    <div class="field field-auto" style="margin:0;">',
+      '    <div class="field field-auto cm-auto" style="margin:0;position:relative;">',
       '      <label style="font-size:11px;">Conto</label>',
-      '      <input type="text" class="cm-conto" value="' + _escAttr(contoRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
-      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '      <input type="text" class="cm-conto" value="' + _escAttr(contoRow) + '" readonly title="' + _escAttr(contoRow) + '" style="background:#f1f5f9;font-size:12px;padding-right:36px;text-overflow:ellipsis;">',
+      '      <span class="auto-tag cm-auto-tag">auto</span>',
       '    </div>',
-      '    <div class="field field-auto" style="margin:0;">',
+      '    <div class="field field-auto cm-auto" style="margin:0;position:relative;">',
       '      <label style="font-size:11px;">Gruppo</label>',
-      '      <input type="text" class="cm-gruppo" value="' + _escAttr(gruppoRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
-      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
-      '    </div>',
-      '    <div class="field field-auto" style="margin:0;">',
-      '      <label style="font-size:11px;">Fornitore</label>',
-      '      <input type="text" class="cm-fornit" value="' + _escAttr(fornitRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
-      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '      <input type="text" class="cm-gruppo" value="' + _escAttr(gruppoRow) + '" readonly title="' + _escAttr(gruppoRow) + '" style="background:#f1f5f9;font-size:12px;padding-right:36px;text-overflow:ellipsis;">',
+      '      <span class="auto-tag cm-auto-tag">auto</span>',
       '    </div>',
       '  </div>',
       // Riga 2: Quantità + Tracciabilità
