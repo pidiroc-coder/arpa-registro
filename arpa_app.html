@@ -674,7 +674,7 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>UDM</label>
-        <input type="text" id="car-udm">
+        <input type="text" id="car-udm" readonly>
         <span class="auto-tag">auto</span>
       </div>
       <div class="field">
@@ -685,12 +685,12 @@
     <div class="field-row">
       <div class="field field-auto">
         <label>Conto</label>
-        <input type="text" id="car-conto">
+        <input type="text" id="car-conto" readonly>
         <span class="auto-tag">auto</span>
       </div>
       <div class="field field-auto">
         <label>Gruppo</label>
-        <input type="text" id="car-gruppo">
+        <input type="text" id="car-gruppo" readonly>
         <span class="auto-tag">auto</span>
       </div>
     </div>
@@ -1347,6 +1347,12 @@ function _ssel_highlight(text, query) {
          _escapeHtml(text.substring(idx + query.length));
 }
 
+
+// Escape per attributi HTML (uso in template letterali per evitare " e <)
+function _escAttr(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function _escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, function(c) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c];
@@ -1975,7 +1981,10 @@ function _cmBuildRighe(ordine, articoliPreSel) {
     if (rim <= 0 && !(preSelMap && preSelMap[pr.articolo.toUpperCase()])) return;
     var ana = _getAnaItem(currentSede, pr.articolo) || {};
     var tracc = (ana.tracc === 'SI' || ana.tracc === 'NO') ? ana.tracc : 'NO';
-    var udmRow = pr.udm || ana.udm || '';
+    var udmRow    = pr.udm || ana.udm || '';
+    var contoRow  = pr.conto || ana.conto || '';
+    var gruppoRow = pr.gruppo || ana.gruppo || '';
+    var fornitRow = pr.fornitore || '';
     var div = document.createElement('div');
     div.className = 'cm-riga card';
     div.dataset.idx = idx;
@@ -2006,6 +2015,30 @@ function _cmBuildRighe(ordine, articoliPreSel) {
       '</div>',
       // Mostra i campi se checkbox è spuntata (pre-selezionato o rimanente>0)
       '<div class="cm-fields" style="'+(checked?'':'display:none')+'">',
+      // Riga 1: campi AUTO (UDM, Conto, Gruppo, Fornitore) - identici al carico singolo
+      '  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:8px;background:#f8fafc;padding:8px;border-radius:6px;">',
+      '    <div class="field field-auto" style="margin:0;">',
+      '      <label style="font-size:11px;">UDM</label>',
+      '      <input type="text" class="cm-udm" value="' + _escAttr(udmRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
+      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '    </div>',
+      '    <div class="field field-auto" style="margin:0;">',
+      '      <label style="font-size:11px;">Conto</label>',
+      '      <input type="text" class="cm-conto" value="' + _escAttr(contoRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
+      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '    </div>',
+      '    <div class="field field-auto" style="margin:0;">',
+      '      <label style="font-size:11px;">Gruppo</label>',
+      '      <input type="text" class="cm-gruppo" value="' + _escAttr(gruppoRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
+      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '    </div>',
+      '    <div class="field field-auto" style="margin:0;">',
+      '      <label style="font-size:11px;">Fornitore</label>',
+      '      <input type="text" class="cm-fornit" value="' + _escAttr(fornitRow) + '" readonly style="background:#f1f5f9;font-size:13px;">',
+      '      <span class="auto-tag" style="font-size:9px;">auto</span>',
+      '    </div>',
+      '  </div>',
+      // Riga 2: Quantità + Tracciabilità
       '  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">',
       '    <div class="field" style="margin:0;">',
       '      <label style="font-size:12px;">Quantità' + (udmRow ? ' (' + udmRow + ')' : '') + '</label>',
@@ -2160,7 +2193,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzf5gMwzeRGByLBEGRDcAyyb4YrbafZyBOTAIUmaESudsaBcgX6qFHN3k2221wby5ROVw/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwwJCoRQCy9N1XFixduxlPkWZXjbkrRkiDyImFPzShr8XMCwnk60Fj7JYYxJ18iSjfX/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -2810,6 +2843,19 @@ async function onOrdineSelezionato(ordineId) {
 
   // Fetch dei prodotti dell'ordine
   var d = await apiCall({action: 'prodotti_ordine', sede: currentSede, ordine: ordineId});
+  
+  // DIAGNOSTICA: log dei prodotti restituiti dall'API
+  // (rimuovere dopo aver verificato il bug Conto/Gruppo)
+  if (d && d.ok && d.dati) {
+    console.log('[DIAGNOSTICA prodotti_ordine] ordine=' + ordineId, d.dati);
+    d.dati.forEach(function(p, i) {
+      console.log('  prodotto ' + i + ': ' + p.articolo + 
+                  ' | conto="' + (p.conto||'') + '"' +
+                  ' | gruppo="' + (p.gruppo||'') + '"' +
+                  ' | udm="' + (p.udm||'') + '"' +
+                  ' | fornitore="' + (p.fornitore||'') + '"');
+    });
+  }
 
   // Popola il select con i soli prodotti dell'ordine
   selArt.innerHTML = '<option value="">— seleziona prodotto —</option>';
