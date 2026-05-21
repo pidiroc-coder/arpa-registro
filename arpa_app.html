@@ -2210,7 +2210,7 @@ async function cmInvia() {
 // ── CONFIGURAZIONE URL API ────────────────────────────────────
 // Modifica BASE_URL_DEFAULT con il nuovo URL dopo ogni ridistribuzione GAS.
 // L'URL salvato in localStorage sovrascrive il default (utile per aggiornamenti).
-var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwwJCoRQCy9N1XFixduxlPkWZXjbkrRkiDyImFPzShr8XMCwnk60Fj7JYYxJ18iSjfX/exec';
+var BASE_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxjJJlPWfY3eI-OSNtk96LXr35A8FgKniLVwUEJqVmfhIWtA3R7vMbWNaa1s0UXP-uRiw/exec';
 var BASE_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('ARPA_API_URL'))
                || BASE_URL_DEFAULT;  // ← inserisci URL distribuzione GAS
 var TOKEN    = 'ARPA2025MOL';
@@ -2474,10 +2474,16 @@ async function setSede(s) {
   if (dSca && dSca.ok) {
     _lastScadenze = dSca;
     if (dSca.totaleAlert > 0) {
+      var _nEsa = (typeof dSca.nEsauriti === 'number') ? dSca.nEsauriti
+                  : dSca.sottoSoglia.filter(function(x){return x.esaurito;}).length;
+      var _nInE = (typeof dSca.nInEsaurimento === 'number') ? dSca.nInEsaurimento
+                  : dSca.sottoSoglia.filter(function(x){return !x.esaurito;}).length;
+      var _parts = [];
+      if (dSca.inScadenza.length > 0) _parts.push(dSca.inScadenza.length + ' in scadenza');
+      if (_nInE > 0) _parts.push('🟡 ' + _nInE + ' in esaurimento');
+      if (_nEsa > 0) _parts.push('🔴 ' + _nEsa + ' esauriti');
       document.getElementById('alertText').innerHTML =
-        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' +
-        dSca.inScadenza.length + ' in scadenza, ' +
-        dSca.sottoSoglia.length + ' sotto soglia';
+        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' + _parts.join(' · ');
       ab.classList.remove('hidden');
     } else {
       ab.classList.add('hidden');
@@ -2594,10 +2600,16 @@ async function loadHomeStats() {
   if (dSca && dSca.ok) {
     _lastScadenze = dSca;
     if (dSca.totaleAlert > 0) {
+      var _nEsa = (typeof dSca.nEsauriti === 'number') ? dSca.nEsauriti
+                  : dSca.sottoSoglia.filter(function(x){return x.esaurito;}).length;
+      var _nInE = (typeof dSca.nInEsaurimento === 'number') ? dSca.nInEsaurimento
+                  : dSca.sottoSoglia.filter(function(x){return !x.esaurito;}).length;
+      var _parts = [];
+      if (dSca.inScadenza.length > 0) _parts.push(dSca.inScadenza.length + ' in scadenza');
+      if (_nInE > 0) _parts.push('🟡 ' + _nInE + ' in esaurimento');
+      if (_nEsa > 0) _parts.push('🔴 ' + _nEsa + ' esauriti');
       document.getElementById('alertText').innerHTML =
-        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' +
-        dSca.inScadenza.length + ' in scadenza, ' +
-        dSca.sottoSoglia.length + ' sotto soglia';
+        '<strong>' + dSca.totaleAlert + ' alert:</strong> ' + _parts.join(' · ');
       ab.classList.remove('hidden');
     }
   }
@@ -3440,8 +3452,10 @@ function mostraDettagliScadenze() {
       + s.scadenza + (s.scaduto?' (SCADUTO)':' ('+s.giorniMancanti+'gg)') + '</span>');
   }).join('');
   var sot = (_lastScadenze.sottoSoglia||[]).map(function(s) {
-    return _rigaDett(s.articolo,
-      '<span style="color:#dc2626;">giac: '+s.giacenza+' / soglia: '+s.soglia+'</span>');
+    var icona = s.esaurito ? '🔴' : '🟡';
+    var col   = s.esaurito ? '#dc2626' : '#d97706';
+    return _rigaDett(icona + ' ' + s.articolo,
+      '<span style="color:'+col+';">giac: '+s.giacenza+' / soglia: '+s.soglia+'</span>');
   }).join('');
   mostraDettaglio(
     '<div style="font-weight:700;font-size:15px;margin-bottom:12px;">Alert prodotti</div>'
