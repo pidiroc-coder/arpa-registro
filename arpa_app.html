@@ -193,6 +193,26 @@
   .card { background:var(--card); border:1px solid var(--bord); border-radius:var(--rad); padding:16px; box-shadow:var(--shadow); }
 
   /* ── OVERLAY CLESSIDRA ── */
+  /* RICOGNIZIONE (19/11/2026) */
+  .ric-overlay { position:fixed; inset:0; z-index:99999; background:rgba(15,23,42,0.96); display:none;
+    flex-direction:column; align-items:center; justify-content:center; padding:28px; text-align:center; color:#fff; }
+  .ric-overlay.show { display:flex; }
+  .ric-overlay .ric-ico { font-size:56px; margin-bottom:14px; }
+  .ric-overlay .ric-tit { font-size:20px; font-weight:800; color:#fbbf24; margin-bottom:12px; letter-spacing:.02em; }
+  .ric-overlay .ric-msg { font-size:16px; line-height:1.5; max-width:360px; }
+  .ric-overlay .ric-dal { font-size:13px; color:rgba(255,255,255,.6); margin-top:12px; }
+  .ric-overlay button { margin-top:22px; background:#fbbf24; color:#111827; border:0; border-radius:10px; padding:12px 22px; font-size:15px; font-weight:700; }
+  /* STORICO PRODOTTO */
+  .sto-art { font-weight:800; font-size:14px; margin:14px 0 4px; }
+  .sto-tot { font-size:12px; color:#475569; margin-bottom:6px; }
+  .sto-lotto { text-align:left; border:1px solid #e2e8f0; border-radius:10px; padding:8px 10px; margin:6px 0; background:#f8fafc; }
+  .sto-lotto-h { font-size:12.5px; font-weight:700; margin-bottom:4px; }
+  .sto-mov { display:flex; gap:8px; font-size:12.5px; padding:3px 0; border-top:1px dashed #e2e8f0; }
+  .sto-mov:first-of-type { border-top:0; }
+  .sto-tipo { font-weight:700; min-width:78px; }
+  .sto-CARICO { color:#166534; } .sto-APERTURA { color:#1d4ed8; } .sto-SCARICO { color:#b91c1c; }
+  .sto-btn { display:flex; align-items:center; gap:8px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;
+    border-radius:12px; padding:10px 12px; margin-bottom:10px; font-size:13.5px; font-weight:600; cursor:pointer; }
   .overlay-wait {
     position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
     background:rgba(30,64,175,0.92);
@@ -1003,6 +1023,15 @@
   <div id="giacenzeList"><div class="loading"><div class="spinner"></div><p>Caricamento giacenze...</p></div></div>
 </div>
 
+<!-- RICOGNIZIONE: blocca tutta l'app (19/11/2026) -->
+<div class="ric-overlay" id="ricOverlay" role="alertdialog" aria-live="assertive">
+  <div class="ric-ico">🔐</div>
+  <div class="ric-tit">MAGAZZINO IN RICOGNIZIONE</div>
+  <div class="ric-msg">Attenzione: non è al momento possibile eseguire nessuna operazione perché il magazzino è in fase di ricognizione.</div>
+  <div class="ric-dal" id="ricDal"></div>
+  <button type="button" onclick="_ricVerifica(true)">Riprova</button>
+</div>
+
 <!-- OVERLAY ATTESA -->
 <div class="overlay-wait" id="overlayWait" style="display:none;">
   <div class="hourglass"></div>
@@ -1492,6 +1521,11 @@ function _pinSuccesso(sessionToken) {
   try {
     if (sessionToken) localStorage.setItem('pin_session_token', sessionToken);
   } catch(e) {}
+  // i dati caricati prima del PIN erano stati rifiutati dal server: si ricaricano (19/11/2026)
+  setTimeout(function () {
+    try { loadHomeStats(); } catch (e) {}
+    try { _cacheAna[currentSede] = null; _loadAnagrafica(currentSede); } catch (e) {}
+  }, 300);
   // Nascondi sia il loader sia il PIN overlay (qualunque sia visibile)
   var loader = document.getElementById('pin-loader');
   var ov     = document.getElementById('pin-overlay');
@@ -2502,6 +2536,7 @@ async function apiCall(params, timeoutMs) {
     return {ok: false, errore: 'URL API non configurato. Aggiorna BASE_URL_DEFAULT nell\'app.'};
   }
   var url = BASE_URL + '?token=' + TOKEN;
+  params = _conSessione(params);
   for (var k in params) {
     if (params[k] !== undefined && params[k] !== null)
       url += '&' + k + '=' + encodeURIComponent(params[k]);
@@ -2517,7 +2552,7 @@ async function apiCall(params, timeoutMs) {
       return {ok: false, errore: 'API non raggiungibile: URL errato o accesso non configurato. ' +
               'Verifica che il deployment GAS sia impostato su "Tutti" come accesso.'};
     }
-    return JSON.parse(text);
+    return _ricIntercetta(JSON.parse(text));
   } catch(e) {
     if (e.name === 'AbortError')
       return {ok: false, errore: 'Timeout (' + (ms/1000) + 's). Verifica nel foglio e riprova.'};
@@ -2537,6 +2572,7 @@ async function apiPost(params, timeoutMs) {
     return {ok: false, errore: 'URL API non configurato. Aggiorna BASE_URL_DEFAULT nell\'app.'};
   }
   var url  = BASE_URL + '?token=' + TOKEN;
+  params = _conSessione(params);
   var ms   = timeoutMs || 30000;
   var ctrl = new AbortController();
   var tid  = setTimeout(function() { ctrl.abort(); }, ms);
@@ -2557,7 +2593,7 @@ async function apiPost(params, timeoutMs) {
       return {ok: false, errore: 'API non raggiungibile: URL errato o accesso non configurato. ' +
               'Verifica che il deployment GAS sia impostato su "Tutti" come accesso.'};
     }
-    return JSON.parse(text);
+    return _ricIntercetta(JSON.parse(text));
   } catch(e) {
     console.error('[apiPost]', e);
     if (e.name === 'AbortError')
@@ -2779,7 +2815,11 @@ function renderGiacenze() {
   var search = ((document.getElementById('giacSearch')||{}).value||'').toLowerCase();
   var oggi = new Date();
   var data = _dataGiacenze.filter(function(g) {
-    if (search && g.articolo.toLowerCase().indexOf(search) === -1) return false;
+    // Ricerca su codice/nome, lotto, ordine, collocazione e ID carico (19/11/2026)
+    if (search) {
+      var testoG = (g.articolo + ' ' + (g.lotto||'') + ' ' + (g.ordine||'') + ' ' + (g.colloc||'') + ' ' + (g.id||'')).toLowerCase();
+      if (!search.split(/\s+/).every(function(w){ return testoG.indexOf(w) !== -1; })) return false;
+    }
     if (giacFilter === 'ALL')  return true;
     if (giacFilter === 'zero') return g.giacenza <= 0;
     if (giacFilter === 'ok')   return g.giacenza > 0;
@@ -2790,9 +2830,14 @@ function renderGiacenze() {
     }
     return true;
   });
-  if (!data.length) { list.innerHTML = '<div class="empty">Nessuna giacenza trovata</div>'; return; }
+  // Storico completo: tutti i movimenti (anche dei lotti esauriti) del prodotto cercato
+  var stoBtn = search.length >= 3
+    ? '<div class="sto-btn" onclick="apriStorico(document.getElementById(\'giacSearch\').value)">📜 <span>Tutti i movimenti di «' +
+      _escHtml(search) + '»<br><small style="font-weight:400;">carichi, aperture, scarichi e trasferimenti — anche dei lotti esauriti</small></span></div>'
+    : '';
+  if (!data.length) { list.innerHTML = stoBtn + '<div class="empty">Nessuna giacenza disponibile trovata</div>'; return; }
   window._giacFiltered = data;
-  list.innerHTML = data.map(function(g, idx) {
+  list.innerHTML = stoBtn + data.map(function(g, idx) {
     var cls  = g.giacenza <= 0 ? 'giac-zero' : g.giacenza <= 5 ? 'giac-warn' : 'giac-ok';
     var scadDt = _parseData(g.scadenza);
     var scadWarn = scadDt && scadDt <= new Date(oggi.getTime() + 30*86400000);
@@ -3177,6 +3222,7 @@ async function submitForm(tipo) {
     params.tracciabilita = 'SI'; // Apertura sempre per prodotti tracciati
     if (!params.sede) params.sede = currentSede;
     var mancantiA = [];
+    if (_dataFutura(params.dataApertura)) { toast('La data di apertura è nel futuro: non si può aprire con una data futura.', 'error'); return; }
     if (!params.lab)             mancantiA.push('Laboratorio');
     if (!params.articolo)        mancantiA.push('Articolo');
     if (!params.dataApertura)    params.dataApertura = oggi;
@@ -3199,6 +3245,7 @@ async function submitForm(tipo) {
 
     if (!params.sede) params.sede = currentSede;
     var mancantiS = [];
+    if (_dataFutura(params.data)) { toast('La data di scarico è nel futuro: non si può scaricare con una data futura.', 'error'); return; }
     if (!params.lab)      mancantiS.push('Laboratorio');
     if (!params.articolo) mancantiS.push('Articolo');
     if (!params.data)     mancantiS.push('Data scarico');
@@ -3425,13 +3472,117 @@ function mostraDettaglioGiacenza(g) {
     + _rigaDett('Scadenza', scadInfo)
     + _rigaDett('Collocazione', g.colloc||'—')
     + _rigaDett('Ordine', g.ordine||'—')
-    + '</table>');
+    + '</table>'
+    + (g.id ? '<div class="sto-btn" style="margin-top:12px;" data-cerca="' + _escHtml(g.id) + '" onclick="apriStorico(this.dataset.cerca)">📜 Movimenti di questo lotto (' + _escHtml(g.id) + ')</div>' : '')
+    + '<div class="sto-btn" data-cerca="' + _escHtml(String(g.articolo).split(' - ')[0]) + '" onclick="apriStorico(this.dataset.cerca)">📜 Tutti i movimenti del prodotto</div>');
 }
+
+// ── STORICO PRODOTTO (19/11/2026) ───────────────────────────
+function _escHtml(t) { return String(t||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+async function apriStorico(cerca) {
+  cerca = String(cerca||'').trim();
+  if (cerca.length < 3) { toast('Scrivi almeno 3 caratteri (codice, nome o lotto)', 'error'); return; }
+  mostraDettaglio('<div class="loading"><div class="spinner"></div><p>Ricerca di tutti i movimenti…</p></div>');
+  var d = await apiCall({action:'storico', cerca:cerca, sede:currentSede}, 60000);
+  if (!d || !d.ok) { mostraDettaglio('<div class="empty">' + _escHtml(d ? d.errore : 'Errore di connessione') + '</div>'); return; }
+  if (!d.dati.length) { mostraDettaglio('<div class="empty">Nessun movimento trovato per «' + _escHtml(cerca) + '» (sede ' + currentSede + ').</div>'); return; }
+  // raggruppa: articolo -> carico di origine (lotto)
+  var perArt = {};
+  d.dati.forEach(function(m) {
+    var a = perArt[m.articolo] = perArt[m.articolo] || {udm:m.udm, lotti:{}, car:0, ape:0, sca:0};
+    var k = m.origCar || m.id;
+    (a.lotti[k] = a.lotti[k] || []).push(m);
+    var q = parseFloat(String(m.quantita||'0').replace(',','.')) || 0;
+    if (m.tipo === 'CARICO' && !m.trasf) a.car += q;
+    if (m.tipo === 'APERTURA') a.ape += 1;
+    if (m.tipo === 'SCARICO' && !m.trasf) a.sca += q;
+  });
+  var ordData = function(x){ var t = _parseData(x.data); return t ? t.getTime() : 0; };
+  var html = '<div style="font-size:15px;font-weight:800;">📜 Storico movimenti</div>' +
+    '<div style="font-size:12px;color:#64748b;">Ricerca «' + _escHtml(cerca) + '» · sede ' + currentSede + ' · ' + d.dati.length + ' movimenti' +
+    (d.troncato ? ' (primi 1500: restringi la ricerca)' : '') + '</div>';
+  Object.keys(perArt).sort().forEach(function(art) {
+    var a = perArt[art];
+    html += '<div class="sto-art">' + _escHtml(art) + '</div>' +
+      '<div class="sto-tot">Caricato ' + a.car + ' ' + _escHtml(a.udm||'') + ' · Aperture ' + a.ape + ' · Scaricato ' + a.sca + '</div>';
+    var chiavi = Object.keys(a.lotti).sort(function(x, y){
+      return Math.min.apply(null, a.lotti[x].map(ordData)) - Math.min.apply(null, a.lotti[y].map(ordData)); });
+    chiavi.forEach(function(k) {
+      var movs = a.lotti[k].slice().sort(function(x, y){
+        var o = {CARICO:0, APERTURA:1, SCARICO:2};
+        return (ordData(x) - ordData(y)) || ((o[x.tipo]||0) - (o[y.tipo]||0)); });
+      var c = movs.filter(function(m){ return m.tipo === 'CARICO'; })[0] || movs[0];
+      html += '<div class="sto-lotto"><div class="sto-lotto-h">Lotto ' + _escHtml(c.lotto||'—') + ' · ' + _escHtml(k) +
+        (c.scadenza && c.scadenza !== 'N/A' ? ' · scad. ' + _escHtml(c.scadenza) : '') + (c.ordine ? ' · ' + _escHtml(c.ordine) : '') + '</div>' +
+        movs.map(function(m) {
+          var et = m.trasf ? (m.tipo === 'CARICO' ? '🔁 ARRIVO' : '🔁 PARTENZA') : m.tipo;
+          return '<div class="sto-mov"><span class="sto-tipo sto-' + m.tipo + '">' + et + '</span><span>' + _escHtml(m.data||'—') +
+            ' · ' + _escHtml(m.id) + (m.tipo === 'CARICO' ? ' · qtà ' + _escHtml(m.quantita) : '') +
+            (m.tecnico ? ' · ' + _escHtml(m.tecnico) : '') + (m.trasf ? ' · ' + m.sede : '') + (m.archivio ? ' · archivio' : '') + '</span></div>';
+        }).join('') + '</div>';
+    });
+  });
+  mostraDettaglio(html);
+}
+
+// ── RICOGNIZIONE (19/11/2026) ───────────────────────────────
+var _ricTimer = null;
+function _ricIntercetta(o) {
+  if (o && o.ricognizione === true && o.ok === false) _ricMostra(o.ricognizioneDal);
+  if (o && o.sessioneScaduta === true && o.ok === false) _pinRichiedi();
+  return o;
+}
+// PIN LATO SERVER (19/11/2026): ogni chiamata porta il token della sessione PIN
+function _conSessione(params) {
+  var p = Object.assign({}, params || {});
+  if (!p.sessionToken) { try { var t = localStorage.getItem('pin_session_token'); if (t) p.sessionToken = t; } catch (e) {} }
+  return p;
+}
+function _pinRichiedi() {
+  try { localStorage.removeItem('pin_session_token'); } catch (e) {}
+  var ov = document.getElementById('pin-overlay'), loader = document.getElementById('pin-loader');
+  if (!ov || ov.classList.contains('show')) return;
+  if (loader) loader.style.display = 'none';
+  try { _pinBuffer = ''; _pinAggiornaDots(); } catch (e) {}
+  ov.classList.remove('hidden'); ov.style.opacity = '1'; ov.classList.add('show');
+  toast('Sessione scaduta: inserisci di nuovo il PIN', 'error');
+}
+function _ricMostra(dal) {
+  var ov = document.getElementById('ricOverlay'); if (!ov) return;
+  document.getElementById('ricDal').textContent = dal ? 'Ricognizione in corso dal ' + dal : '';
+  ov.classList.add('show');
+  if (!_ricTimer) _ricTimer = setInterval(function(){ _ricVerifica(false); }, 60000);
+}
+function _ricNascondi() {
+  var ov = document.getElementById('ricOverlay'); if (ov) ov.classList.remove('show');
+  if (_ricTimer) { clearInterval(_ricTimer); _ricTimer = null; }
+}
+async function _ricVerifica(manuale) {
+  var d = await apiCall({action:'stato'}, 20000);
+  if (d && d.ok && d.ricognizione) { _ricMostra(d.ricognizioneDal); if (manuale) toast('Ricognizione ancora in corso', 'error'); }
+  else if (d && d.ok) { var era = document.getElementById('ricOverlay').classList.contains('show'); _ricNascondi(); if (era) toast('✅ Ricognizione terminata: puoi operare', 'success'); }
+}
+document.addEventListener('DOMContentLoaded', function(){ _ricVerifica(false); });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) _ricVerifica(false); });
 
 function _rigaDett(label, val) {
   return '<tr><td style="padding:5px 0;color:#64748b;width:40%;">' + label
     + '</td><td style="padding:5px 0;">' + (val||'—') + '</td></tr>';
 }
+
+// true se la data "dd/mm/yyyy" è dopo oggi (19/11/2026)
+function _dataFutura(s) {
+  var d = _parseData(s); if (!d) return false;
+  var o = new Date(); o.setHours(0,0,0,0);
+  return d > o;
+}
+// Calendario: non permette di scegliere date future in apertura/scarico
+function _maxOggiDate() {
+  var oggiIso = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  ['ape-data','sca-data','car-data','cm-data','tr-data'].forEach(function(id){ var el = document.getElementById(id); if (el) el.max = oggiIso; });
+}
+document.addEventListener('DOMContentLoaded', _maxOggiDate);
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) _maxOggiDate(); });
 
 function _parseData(s) {
   if (!s || s === 'N/A') return null;
