@@ -2234,9 +2234,10 @@ async function cmInvia() {
     if (d.errori && d.errori.length)
       subMsg += '<br><span style="color:#d97706;font-size:12px;">⚠ ' + d.errori.length + ' saltati: ' + d.errori[0] + '</span>';
     document.getElementById('modalSubtesto').innerHTML = subMsg;
+    if (d.avviso) _avvisoBloccoNelModal(d.avviso);
     var modal = document.getElementById('modalSuccesso');
     if (modal) modal.style.display = 'flex';
-    toast('✅ ' + d.messaggio, 'success');
+    toast((d.avviso ? '⚠️ ' : '✅ ') + d.messaggio, d.avviso ? 'error' : 'success');
   }, 200);
 }
 
@@ -3313,7 +3314,12 @@ async function submitForm(tipo) {
 
   setTimeout(function() {
     mostraModalSuccesso(tipo, d.riga);
-    toast('✅ Riga ' + d.riga + ' registrata nel foglio', 'success');
+    if (d.avviso) {
+      _avvisoBloccoNelModal(d.avviso);
+      toast('⚠️ Riga ' + d.riga + ' scritta ma NON bloccata: non ripetere, avvisa l\'amministratore', 'error');
+    } else {
+      toast('✅ Riga ' + d.riga + ' registrata nel foglio', 'success');
+    }
   }, 200);
 }
 
@@ -3351,6 +3357,28 @@ function mostraModalSuccesso(tipo, riga) {
 function chiudiModalSuccesso() {
   var modal = document.getElementById('modalSuccesso');
   if (modal) modal.style.display = 'none';
+  // ripristina icona e titolo normali (cambiati da _avvisoBloccoNelModal)
+  var box = modal && modal.querySelector('.modal-box');
+  if (box) {
+    var ic = box.querySelector('.modal-icon'), ti = box.querySelector('.modal-title');
+    if (ic) { ic.innerHTML = '&#10003;'; ic.style.background = ''; ic.style.color = ''; }
+    if (ti) { ti.innerHTML = 'Operazione conclusa<br>con successo!'; ti.style.color = ''; }
+  }
+}
+
+// Riga scritta ma NON bloccata (19/11/2026): avviso rosso fisso nel modal, resta finche' non si preme OK
+function _avvisoBloccoNelModal(avviso) {
+  var box = document.querySelector('#modalSuccesso .modal-box');
+  if (!box) return;
+  var ic = box.querySelector('.modal-icon'), ti = box.querySelector('.modal-title');
+  if (ic) { ic.textContent = '!'; ic.style.background = '#dc2626'; ic.style.color = '#fff'; }
+  if (ti) { ti.textContent = 'ATTENZIONE: riga NON bloccata'; ti.style.color = '#991b1b'; }
+  document.getElementById('modalSubtesto').innerHTML +=
+    '<div style="margin-top:14px;padding:12px 14px;background:#fee2e2;border:2px solid #dc2626;' +
+    'border-radius:8px;text-align:left;font-size:14px;color:#991b1b;line-height:1.45;">' +
+    '<div style="font-weight:800;margin-bottom:6px;">⚠ ' + _escHtml(avviso) + '</div>' +
+    '<div style="font-weight:700;">Il movimento è GIÀ scritto nel registro: NON ripetere la registrazione.</div>' +
+    '<div style="margin-top:4px;">Avvisa subito l\'amministratore indicando il numero di riga.</div></div>';
 }
 
 function svuotaForm(tipo) {
